@@ -68,7 +68,10 @@
                 <h2 id="song-title" class="text-2xl font-bold mt-1 text-white"></h2>
                 <p id="artist-name" class="text-lg text-gray-300"></p>
                 <p id="album-name" class="text-sm text-gray-400 mt-2"></p>
-                <div id="progress-bar-container" class="mt-4 h-1 bg-gray-700 rounded-full overflow-hidden">
+                <!-- Time Display Added Here -->
+                <p id="time-text" class="text-sm text-gray-400 text-right font-mono mt-2 mb-1">0:00 / 0:00</p>
+                <!-- End Time Display -->
+                <div id="progress-bar-container" class="mt-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div id="progress-bar" class="h-full spotify-green transition-all duration-500" style="width: 0%;"></div>
                 </div>
             </div>
@@ -91,10 +94,19 @@
         const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';
         const TOKEN_URL = 'https://accounts.spotify.com/api/token';
         const NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing';
+        // This is the correct scope needed to read the currently playing track.
         const SCOPE = 'user-read-currently-playing';
 
         let accessToken = null;
         let pollingIntervalId = null;
+        
+        // --- New Variables for Smooth Progress Tracking ---
+        let progressUpdaterId = null; // Interval for smooth progress bar update
+        let currentTrackId = null;    // ID of the track currently being displayed smoothly
+        let progressStartTime = 0;    // Timestamp when the smooth update started
+        let initialProgressMs = 0;    // Progress reported by Spotify at progressStartTime
+        let trackDurationMs = 0;      // Duration of the current track in ms
+        // --------------------------------------------------
 
         // --- UI Element References ---
         const loginSection = document.getElementById('login-section');
@@ -107,8 +119,9 @@
         const albumArt = document.getElementById('album-art');
         const progressBar = document.getElementById('progress-bar');
         const pollingIndicator = document.getElementById('polling-indicator');
+        const timeText = document.getElementById('time-text'); // New UI ref
 
-        // --- PKCE Helper Functions ---
+        // --- Utility Functions ---
 
         /** Generates a cryptographically secure random string. */
         function generateRandomString(length) {
@@ -132,14 +145,24 @@
             const hash = await crypto.subtle.digest('SHA-256', data);
             return base64urlencode(hash);
         }
+        
+        /** Converts milliseconds to MM:SS format. */
+        function msToTime(ms) {
+            if (ms === null || isNaN(ms) || ms < 0) return '0:00';
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
 
         // --- Authentication Flow ---
 
         function redirectToAuthCodeFlow() {
-            if (CLIENT_ID === 'YOUR_CLIENT_ID') {
+            // Updated check to catch the new placeholder string
+            if (CLIENT_ID === 'PASTE_YOUR_CLIENT_ID_HERE') {
                 // IMPORTANT: Since alert() is restricted, log to console and set a UI message instead
                 console.error('ERROR: Please update CLIENT_ID in the script.');
-                document.getElementById('status-message').textContent = 'ERROR: Please replace "YOUR_CLIENT_ID" in the script and reload.';
+                document.getElementById('status-message').textContent = 'AUTH ERROR: Please replace the placeholder ID in the script and reload.';
                 document.getElementById('status-message').classList.remove('hidden');
                 loginSection.classList.add('hidden');
                 return;
@@ -148,6 +171,7 @@
             // 1. Create and store a code verifier
             const codeVerifier = generateRandomString(128);
             localStorage.setItem('code_verifier', codeVerifier);
+            console.log("Requested Spotify Scope:", SCOPE); // Log scope for debugging
 
             // 2. Hash the code verifier to get the code challenge
             sha256(codeVerifier).then(codeChallenge => {
@@ -198,7 +222,6 @@
 
                 const data = await response.json();
                 
-                // Store the token (optional: store refresh token too if you want long-lived access)
                 return data.access_token;
             } catch (error) {
                 console.error('Error fetching access token:', error);
@@ -224,16 +247,24 @@
                 }
 
                 if (!response.ok) {
-                    // Check for token expiration (401 Unauthorized)
+                    const errorDetails = await response.text().catch(() => response.statusText);
+                    
                     if (response.status === 401) {
-                        console.error("Access Token expired or invalid. Please re-login.");
-                        // Handle re-login flow (or refresh token flow if implemented)
-                        // Note: For simplicity, we just redirect back to the home page to restart the auth flow.
+                        console.error("Access Token expired or invalid. Attempting re-login.");
+                        // Redirect to restart the auth flow
                         setTimeout(() => {
                            window.location.href = REDIRECT_URI;
                         }, 100);
                         return null;
+                    } 
+                    
+                    if (response.status === 403) {
+                         // Specific guidance for 403 error
+                         console.error(`API Error 403 (Forbidden): The token is valid but lacks permission. Details: ${errorDetails}`);
+                         statusMessage.textContent = `403 FORBIDDEN: Please ensure the Spotify account you logged in with is added as a 'User' in your app's 'Users and Access' settings in the Spotify Developer Dashboard.`;
+                         throw new Error(`API Error 403 Forbidden: Missing scope or account whitelisting issue.`);
                     }
+
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
                 }
 
@@ -242,78 +273,133 @@
             } catch (error) {
                 console.error('Error fetching currently playing track:', error);
                 // Stop polling on critical errors
-                clearInterval(pollingIntervalId);
-                statusMessage.textContent = 'An API error occurred. Check console.';
-                pollingIndicator.classList.add('hidden');
+                if (!error.message.includes('403')) {
+                    clearInterval(pollingIntervalId);
+                    pollingIndicator.classList.add('hidden');
+                    statusMessage.textContent = 'A critical network or API error occurred. Check console.';
+                }
                 return null;
             }
         }
+        
+        /**
+         * Runs every 500ms to smoothly update the progress bar and time text
+         * based on the initial Spotify progress and local elapsed time.
+         */
+        function smoothUpdateProgress() {
+            const elapsedTime = Date.now() - progressStartTime;
+            let currentProgressMs = initialProgressMs + elapsedTime;
 
-        /** Main logic to poll for the currently playing song until one is found. */
+            // Cap the progress at the track duration
+            if (currentProgressMs > trackDurationMs) {
+                currentProgressMs = trackDurationMs;
+                clearInterval(progressUpdaterId);
+                progressUpdaterId = null;
+                // Wait for the next 5s poll to detect track change/end
+            }
+
+            const progressPercent = (currentProgressMs / trackDurationMs) * 100;
+            
+            // Update UI
+            progressBar.style.width = `${progressPercent}%`;
+            timeText.textContent = `${msToTime(currentProgressMs)} / ${msToTime(trackDurationMs)}`;
+        }
+
+
+        /** Main logic to poll for the currently playing song every 5 seconds. */
         function pollForSong() {
             // Show status and hide login
             loginSection.classList.add('hidden');
             statusSection.classList.remove('hidden');
-            songDisplay.classList.add('hidden');
             pollingIndicator.classList.remove('hidden');
             
-            statusMessage.textContent = 'Waiting for you to start playing music...';
+            // Set initial status message
+            if (!statusMessage.textContent.includes('FORBIDDEN')) {
+                 statusMessage.textContent = 'Waiting for you to start playing music...';
+            }
+
 
             pollingIntervalId = setInterval(async () => {
                 const data = await fetchCurrentlyPlaying();
                 
-                // If fetchCurrentlyPlaying returned null due to 204 or 401
-                if (!data) {
-                    // If 401 was hit, redirection is handled inside fetchCurrentlyPlaying
-                    if (!pollingIntervalId) return; 
-
-                    console.log('No active playback found. Continuing to poll...');
-                    statusMessage.textContent = 'Waiting for you to start playing music...';
-                    songDisplay.classList.add('hidden');
-                    return;
-                }
-                
-                // 2. Something is playing, but it's paused
-                if (!data.is_playing) {
-                    const artistText = data.item.artists.map(a => a.name).join(', ');
-                    statusMessage.textContent = `Music is paused: ${data.item.name} by ${artistText}`;
-                    songDisplay.classList.add('hidden');
-                    return;
-                }
-
-                // 3. SUCCESS: Song is actively playing
-                if (data.is_playing) {
-                    clearInterval(pollingIntervalId); // Stop polling! We found the song.
-                    pollingIntervalId = null;
-                    
-                    console.log('Playback started. Stopping poll.');
-                    pollingIndicator.classList.add('hidden');
-                    statusMessage.classList.add('hidden');
-                    songDisplay.classList.remove('hidden');
-
+                if (data && data.is_playing) {
+                    // --- Case 1: Song is actively playing ---
                     const track = data.item;
-                    const artistText = track.artists.map(a => a.name).join(', ');
-                    const progressMs = data.progress_ms;
-                    const durationMs = track.duration_ms;
-                    const progressPercent = (progressMs / durationMs) * 100;
-
-                    // Update UI elements
-                    songTitle.textContent = track.name;
-                    artistName.textContent = artistText;
-                    albumName.textContent = track.album.name;
-                    albumArt.src = track.album.images[0]?.url || 'https://placehold.co/400x400/1DB954/ffffff?text=No+Art';
-                    progressBar.style.width = `${progressPercent}%`;
                     
-                    // Display the "found" message briefly before showing the track
-                    setTimeout(() => {
-                         statusMessage.textContent = 'Currently Playing:';
-                         statusMessage.classList.remove('hidden');
-                    }, 100);
+                    // A. Check if this is a NEW track or if the smooth updater is not running
+                    if (track.id !== currentTrackId || progressUpdaterId === null) {
+                        
+                        console.log('New track detected or resumed. Starting smooth update.');
+                        
+                        // Clear old smooth interval if exists
+                        if (progressUpdaterId) clearInterval(progressUpdaterId);
 
-                    // If you wanted to continuously update the progress bar, you would start a new, faster interval here.
+                        // Update metadata
+                        const artistText = track.artists.map(a => a.name).join(', ');
+                        songTitle.textContent = track.name;
+                        artistName.textContent = artistText;
+                        albumName.textContent = track.album.name;
+                        albumArt.src = track.album.images[0]?.url || 'https://placehold.co/400x400/1DB954/ffffff?text=No+Art';
+                        
+                        // Initialize smooth update variables
+                        currentTrackId = track.id;
+                        initialProgressMs = data.progress_ms;
+                        trackDurationMs = track.duration_ms;
+                        progressStartTime = Date.now();
+                        
+                        // Start the smooth update interval (runs every 500ms)
+                        progressUpdaterId = setInterval(smoothUpdateProgress, 500);
+
+                        // Initial manual update to ensure immediate display
+                        smoothUpdateProgress();
+                        
+                        // Update UI visibility
+                        statusMessage.textContent = 'Currently Playing:';
+                        statusMessage.classList.remove('hidden');
+                        songDisplay.classList.remove('hidden');
+                        pollingIndicator.classList.add('hidden');
+                        
+                    } else if (track.id === currentTrackId) {
+                        // B. Same track is playing: Check for seeking (progress jump)
+                        
+                        const expectedProgressMs = initialProgressMs + (Date.now() - progressStartTime);
+                        const reportedProgressMs = data.progress_ms;
+                        const diff = Math.abs(expectedProgressMs - reportedProgressMs);
+                        
+                        // Re-sync if the reported position is off by more than 2 seconds (user seeked)
+                        if (diff > 2000) {
+                            console.log('Seek detected! Re-syncing progress.');
+                            initialProgressMs = reportedProgressMs;
+                            progressStartTime = Date.now();
+                        }
+                    }
+
+                } else {
+                    // --- Case 2: Nothing playing or music is paused (204 or is_playing=false) ---
+                    
+                    // Stop the smooth progress interval
+                    if (progressUpdaterId) {
+                        clearInterval(progressUpdaterId);
+                        progressUpdaterId = null;
+                    }
+                    currentTrackId = null;
+                    
+                    // Check if music is paused
+                    if (data && !data.is_playing && data.item) {
+                        const artistText = data.item.artists.map(a => a.name).join(', ');
+                        statusMessage.textContent = `Music is paused: ${data.item.name} by ${artistText}`;
+                        songDisplay.classList.add('hidden');
+                    } else if (!statusMessage.textContent.includes('FORBIDDEN')) {
+                        // Or no playback found (204)
+                        statusMessage.textContent = 'Waiting for you to start playing music...';
+                        songDisplay.classList.add('hidden');
+                    }
+                    
+                    statusMessage.classList.remove('hidden');
+                    pollingIndicator.classList.remove('hidden');
                 }
 
-            }, 5000); // Check every 5 seconds (5000ms)
+            }, 5000); // Main state check every 5 seconds
         }
 
         // --- Main Initialization ---
@@ -322,6 +408,10 @@
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
 
+            // Clear any existing intervals on fresh load
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
+            if (progressUpdaterId) clearInterval(progressUpdaterId);
+
             if (code) {
                 // PHASE 2: Callback from Spotify. Exchange the code for an Access Token.
                 statusSection.classList.remove('hidden');
@@ -329,22 +419,20 @@
                 loginSection.classList.add('hidden');
 
                 // Clear the URL to remove the sensitive code parameter
-                // We use history.replaceState to modify the current URL without adding a new history entry
                 history.replaceState(null, '', REDIRECT_URI); 
 
                 accessToken = await getAccessToken(code);
                 
                 if (accessToken) {
-                    console.log("Successfully retrieved access token.");
+                    console.log("Successfully retrieved access token. Starting playback poll.");
                     pollForSong();
                 } else {
-                    statusMessage.textContent = 'Authentication failed. Check console for details.';
+                    statusMessage.textContent = 'Authentication failed (Token exchange error). Check console.';
                     loginSection.classList.remove('hidden');
                 }
 
             } else {
                 // PHASE 1: Initial load. Check if we have an existing token or need to log in.
-                // For this simple app, we force login if no code is present.
                 loginSection.classList.remove('hidden');
                 document.getElementById('login-button').addEventListener('click', redirectToAuthCodeFlow);
             }
