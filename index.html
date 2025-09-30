@@ -541,7 +541,7 @@
                         progressStartTime = Date.now();
                         
                         // Start the smooth update interval (runs every 500ms)
-                        progressUpdaterId = setInterval(smoothUpdateProgress, 500);
+                        progressUpdaterId = setInterval(smoothUpdateProgress, 200);
 
                         // Initial manual update to ensure immediate display
                         smoothUpdateProgress();
