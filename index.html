@@ -249,7 +249,7 @@
 
             try {
                 const response = await fetch(url);
-                console.log(response)
+                // console.log(response)
                 
                 if (!response.ok) {
                     console.error(`LRC Lib API failed: ${response.status}`);
@@ -257,12 +257,12 @@
                 }
                 
                 const results = await response.json();
-                console.log(results)
+                // console.log(results)
                 
-                if (results.length > 0 && results[0].lrc && results[0].synced) {
+                if (results.length > 0 && results[0].plainLyrics && results[0].syncedLyrics) {
                     console.log(`LRC Lib Success: Found synced lyrics for "${trackName}"`);
                     // Success: Found synced LRC content
-                    return parseLrc(results[0].lrc);
+                    return parseLrc(results[0].syncedLyrics);
                 }
                 
                 console.log(`LRC Lib Failure: No synced result found for "${trackName}"`);
