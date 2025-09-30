@@ -188,6 +188,20 @@
             const seconds = totalSeconds % 60;
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
+
+        /** * Cleans up track titles by removing common metadata in parentheses or brackets 
+         * to improve matching accuracy with LRC APIs. 
+         */
+        function cleanTrackTitle(title) {
+            // 1. Remove text in parentheses (e.g., (Live), (Remix))
+            let cleaned = title.replace(/\s*\(.*?\)\s*/g, ' ');
+            // 2. Remove text in brackets (e.g., [Explicit], [Official Video])
+            cleaned = cleaned.replace(/\s*\[.*?\]\s*/g, ' ');
+            // 3. Remove common features/mixes (e.g., "feat. Artist", " - Radio Edit")
+            cleaned = cleaned.replace(/\s(feat|ft)\..*/i, '').replace(/\s-\s(Radio|Album|Single|Original)\s(Edit|Mix|Version).*/i, '').trim();
+            // 4. Clean up multiple spaces left over
+            return cleaned.replace(/\s+/g, ' ').trim();
+        }
         
         /** * Parses LRC content into a structured array of lyric lines with time in milliseconds.
          * LRC format: [mm:ss.xx] Lyric text
@@ -225,21 +239,31 @@
             // Display a loading message immediately
             lyricsContent.innerHTML = '<p class="text-gray-400 italic mt-4 text-center">Fetching synchronized lyrics...</p>';
             
-            const url = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(trackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=&limit=1`;
+            // Clean the track name for better API matching
+            const cleanedTrackName = cleanTrackTitle(trackName);
+            
+            // Log the clean query parameters for debugging
+            console.log(`LRC Lib Querying with: Track="${cleanedTrackName}", Artist="${artistName}"`);
+
+            const url = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=&limit=1`;
 
             try {
                 const response = await fetch(url);
                 
                 if (!response.ok) {
-                    throw new Error(`LRC Lib API failed: ${response.status}`);
+                    console.error(`LRC Lib API failed: ${response.status}`);
+                    return null;
                 }
                 
                 const results = await response.json();
                 
                 if (results.length > 0 && results[0].lrc && results[0].synced) {
+                    console.log(`LRC Lib Success: Found synced lyrics for "${trackName}"`);
                     // Success: Found synced LRC content
                     return parseLrc(results[0].lrc);
                 }
+                
+                console.log(`LRC Lib Failure: No synced result found for "${trackName}"`);
 
                 // Failure: No synchronized lyrics found
                 return null;
