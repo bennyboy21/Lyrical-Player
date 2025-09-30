@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Now Playing Tracker (PKCE)</title>
+    <title>Spotify Now Playing Tracker (LRC Lib Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -38,6 +38,29 @@
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.05); }
         }
+        /* Style for lyrics */
+        .lyrics-box {
+            height: 200px; /* Taller box for better lyric visibility */
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            background-color: #282828;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        .lyric-line {
+            padding: 0.5rem 0;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #b3b3b3;
+            transition: color 0.3s ease, font-weight 0.3s ease, transform 0.3s ease;
+        }
+        .lyric-line.active {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.35rem; /* Slightly larger when active */
+            transform: scale(1.02);
+            text-shadow: 0 0 8px rgba(29, 185, 84, 0.7);
+        }
     </style>
 </head>
 <body>
@@ -68,11 +91,19 @@
                 <h2 id="song-title" class="text-2xl font-bold mt-1 text-white"></h2>
                 <p id="artist-name" class="text-lg text-gray-300"></p>
                 <p id="album-name" class="text-sm text-gray-400 mt-2"></p>
-                <!-- Time Display Added Here -->
+                <!-- Time Display -->
                 <p id="time-text" class="text-sm text-gray-400 text-right font-mono mt-2 mb-1">0:00 / 0:00</p>
-                <!-- End Time Display -->
+                <!-- Progress Bar -->
                 <div id="progress-bar-container" class="mt-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div id="progress-bar" class="h-full spotify-green transition-all duration-500" style="width: 0%;"></div>
+                </div>
+
+                <!-- Lyrics Container -->
+                <div id="lyrics-container" class="mt-6 text-center">
+                    <!-- Lyrics will be inserted here -->
+                    <div class="lyrics-box" id="lyrics-content">
+                        <p class="text-gray-400 italic mb-4 mt-8 text-sm">Loading lyrics...</p>
+                    </div>
                 </div>
             </div>
 
@@ -86,26 +117,28 @@
 
     <script>
         // --- IMPORTANT: CONFIGURE THESE VALUES ---
-        const CLIENT_ID = '86d5980bc6284ccba0515e63ddd32845'; // <<< You must replace this with your Spotify Client ID
-        // The REDIRECT_URI MUST be registered exactly in your Spotify Developer App settings.
-        const REDIRECT_URI = 'https://bennyboy21.github.io/Lyrical-Player/'; // Updated as requested
+        const CLIENT_ID = '86d5980bc6284ccba0515e63ddd32845'; // Spotify Client ID
+        const REDIRECT_URI = 'https://bennyboy21.github.io/Lyrical-Player/'; // Redirect URI
+        // NOTE: LRC Lib is used for fetching lyrics. A key is usually not required for simple searches.
+        const LRCLIB_API_BASE = 'https://lrclib.net/api/search'; 
         // ------------------------------------------
 
         const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';
         const TOKEN_URL = 'https://accounts.spotify.com/api/token';
         const NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing';
-        // This is the correct scope needed to read the currently playing track.
         const SCOPE = 'user-read-currently-playing';
 
         let accessToken = null;
         let pollingIntervalId = null;
         
         // --- New Variables for Smooth Progress Tracking ---
-        let progressUpdaterId = null; // Interval for smooth progress bar update
-        let currentTrackId = null;    // ID of the track currently being displayed smoothly
-        let progressStartTime = 0;    // Timestamp when the smooth update started
-        let initialProgressMs = 0;    // Progress reported by Spotify at progressStartTime
-        let trackDurationMs = 0;      // Duration of the current track in ms
+        let progressUpdaterId = null; 
+        let currentTrackId = null;    
+        let progressStartTime = 0;    
+        let initialProgressMs = 0;    
+        let trackDurationMs = 0;      
+        let currentLyrics = null;     // Stores the lyrics object for the currently playing song
+        let activeLyricIndex = -1;    // Index of the currently highlighted lyric line
         // --------------------------------------------------
 
         // --- UI Element References ---
@@ -119,7 +152,8 @@
         const albumArt = document.getElementById('album-art');
         const progressBar = document.getElementById('progress-bar');
         const pollingIndicator = document.getElementById('polling-indicator');
-        const timeText = document.getElementById('time-text'); // New UI ref
+        const timeText = document.getElementById('time-text');
+        const lyricsContent = document.getElementById('lyrics-content');
 
         // --- Utility Functions ---
 
@@ -154,13 +188,143 @@
             const seconds = totalSeconds % 60;
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
+        
+        /** * Parses LRC content into a structured array of lyric lines with time in milliseconds.
+         * LRC format: [mm:ss.xx] Lyric text
+         */
+        function parseLrc(lrcContent) {
+            const lines = [];
+            const lrcRegex = /^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
 
-        // --- Authentication Flow ---
+            lrcContent.split('\n').forEach(line => {
+                const match = line.match(lrcRegex);
+                if (match) {
+                    const minutes = parseInt(match[1], 10);
+                    const seconds = parseInt(match[2], 10);
+                    // Milliseconds can be 2 or 3 digits. Normalize to 3.
+                    let ms = parseInt(match[3].padEnd(3, '0'), 10);
+                    const text = match[4].trim() || ' ';
+
+                    const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
+                    
+                    lines.push({ time: timeMs, text: text });
+                }
+            });
+            
+            // Sort by time just in case
+            lines.sort((a, b) => a.time - b.time);
+            
+            return lines;
+        }
+
+
+        // --- Lyrics Management (LRC Lib Integration) ---
+        
+        /** Fetches synchronized lyrics from LRC Lib. */
+        async function fetchSyncedLyrics(trackName, artistName) {
+            // Display a loading message immediately
+            lyricsContent.innerHTML = '<p class="text-gray-400 italic mt-4 text-center">Fetching synchronized lyrics...</p>';
+            
+            const url = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(trackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=&limit=1`;
+
+            try {
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`LRC Lib API failed: ${response.status}`);
+                }
+                
+                const results = await response.json();
+                
+                if (results.length > 0 && results[0].lrc && results[0].synced) {
+                    // Success: Found synced LRC content
+                    return parseLrc(results[0].lrc);
+                }
+
+                // Failure: No synchronized lyrics found
+                return null;
+                
+            } catch (error) {
+                console.error("Error fetching lyrics from LRC Lib:", error);
+                return null;
+            }
+        }
+
+
+        /** Renders the lyrics lines to the container, or shows a "not available" message. */
+        function renderLyrics(lyrics, trackName, artistName) {
+            activeLyricIndex = -1; // Reset lyric state
+            
+            if (lyrics && lyrics.length > 0) {
+                // Render Synced Lyrics
+                lyricsContent.innerHTML = '';
+                lyrics.forEach((line, index) => {
+                    const p = document.createElement('p');
+                    p.textContent = line.text || ' '; // Use a space for empty lines
+                    p.className = 'lyric-line transition-all duration-300';
+                    p.dataset.time = line.time; // Store the start time
+                    p.id = `lyric-line-${index}`;
+                    lyricsContent.appendChild(p);
+                });
+            } else {
+                // Show "Not Available" message
+                lyricsContent.innerHTML = `
+                    <p class="text-gray-400 italic mb-4 mt-8 text-base">
+                        No synchronized lyrics found on LRC Lib for:
+                        <br><span class="font-semibold text-white">"${trackName}" by ${artistName}</span>
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        (LRC Lib is a community-sourced database, so coverage varies.)
+                    </p>
+                `;
+            }
+        }
+        
+        /** Finds and highlights the current lyric line based on progressMs. */
+        function updateLyricHighlight(progressMs) {
+            if (!currentLyrics) return;
+
+            const lines = currentLyrics;
+            let newIndex = -1;
+
+            // Find the index of the line whose time is less than or equal to the current progress
+            for (let i = lines.length - 1; i >= 0; i--) {
+                if (progressMs >= lines[i].time) {
+                    newIndex = i;
+                    break;
+                }
+            }
+            
+            if (newIndex !== activeLyricIndex) {
+                // Deactivate the old line
+                if (activeLyricIndex !== -1) {
+                    const oldLine = document.getElementById(`lyric-line-${activeLyricIndex}`);
+                    if (oldLine) oldLine.classList.remove('active');
+                }
+
+                // Activate the new line
+                if (newIndex !== -1) {
+                    const newLine = document.getElementById(`lyric-line-${newIndex}`);
+                    if (newLine) {
+                        newLine.classList.add('active');
+                        // Scroll the new line into view, centered if possible (after a short delay to account for size change)
+                        setTimeout(() => {
+                            newLine.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }, 50); 
+                    }
+                }
+                activeLyricIndex = newIndex;
+            }
+        }
+
+
+        // --- Authentication Flow (Omitted for brevity, kept in file) ---
 
         function redirectToAuthCodeFlow() {
-            // Updated check to catch the new placeholder string
             if (CLIENT_ID === 'PASTE_YOUR_CLIENT_ID_HERE') {
-                // IMPORTANT: Since alert() is restricted, log to console and set a UI message instead
                 console.error('ERROR: Please update CLIENT_ID in the script.');
                 document.getElementById('status-message').textContent = 'AUTH ERROR: Please replace the placeholder ID in the script and reload.';
                 document.getElementById('status-message').classList.remove('hidden');
@@ -168,12 +332,10 @@
                 return;
             }
 
-            // 1. Create and store a code verifier
             const codeVerifier = generateRandomString(128);
             localStorage.setItem('code_verifier', codeVerifier);
-            console.log("Requested Spotify Scope:", SCOPE); // Log scope for debugging
+            console.log("Requested Spotify Scope:", SCOPE);
 
-            // 2. Hash the code verifier to get the code challenge
             sha256(codeVerifier).then(codeChallenge => {
                 const params = new URLSearchParams({
                     response_type: 'code',
@@ -184,7 +346,6 @@
                     redirect_uri: REDIRECT_URI,
                 });
 
-                // 3. Redirect the user to the Spotify authorization page
                 window.location.href = `${AUTHORIZE_URL}?${params.toString()}`;
             }).catch(e => {
                 console.error("Error generating code challenge:", e);
@@ -198,7 +359,6 @@
                 return null;
             }
             
-            // Clear verifier after use
             localStorage.removeItem('code_verifier'); 
 
             const params = new URLSearchParams({
@@ -229,6 +389,7 @@
             }
         }
 
+
         // --- Spotify API Interaction ---
 
         /** Fetches the currently playing song from Spotify. */
@@ -242,7 +403,6 @@
                 });
 
                 if (response.status === 204) {
-                    // 204 No Content: Nothing is playing or no active device
                     return null;
                 }
 
@@ -251,7 +411,6 @@
                     
                     if (response.status === 401) {
                         console.error("Access Token expired or invalid. Attempting re-login.");
-                        // Redirect to restart the auth flow
                         setTimeout(() => {
                            window.location.href = REDIRECT_URI;
                         }, 100);
@@ -259,7 +418,6 @@
                     } 
                     
                     if (response.status === 403) {
-                         // Specific guidance for 403 error
                          console.error(`API Error 403 (Forbidden): The token is valid but lacks permission. Details: ${errorDetails}`);
                          statusMessage.textContent = `403 FORBIDDEN: Please ensure the Spotify account you logged in with is added as a 'User' in your app's 'Users and Access' settings in the Spotify Developer Dashboard.`;
                          throw new Error(`API Error 403 Forbidden: Missing scope or account whitelisting issue.`);
@@ -272,7 +430,6 @@
 
             } catch (error) {
                 console.error('Error fetching currently playing track:', error);
-                // Stop polling on critical errors
                 if (!error.message.includes('403')) {
                     clearInterval(pollingIntervalId);
                     pollingIndicator.classList.add('hidden');
@@ -283,8 +440,7 @@
         }
         
         /**
-         * Runs every 500ms to smoothly update the progress bar and time text
-         * based on the initial Spotify progress and local elapsed time.
+         * Runs every 500ms to smoothly update the progress bar, time, and lyrics.
          */
         function smoothUpdateProgress() {
             const elapsedTime = Date.now() - progressStartTime;
@@ -295,7 +451,6 @@
                 currentProgressMs = trackDurationMs;
                 clearInterval(progressUpdaterId);
                 progressUpdaterId = null;
-                // Wait for the next 5s poll to detect track change/end
             }
 
             const progressPercent = (currentProgressMs / trackDurationMs) * 100;
@@ -303,17 +458,20 @@
             // Update UI
             progressBar.style.width = `${progressPercent}%`;
             timeText.textContent = `${msToTime(currentProgressMs)} / ${msToTime(trackDurationMs)}`;
+
+            // Update Lyrics if they are loaded
+            if (currentLyrics) {
+                updateLyricHighlight(currentProgressMs);
+            }
         }
 
 
         /** Main logic to poll for the currently playing song every 5 seconds. */
         function pollForSong() {
-            // Show status and hide login
             loginSection.classList.add('hidden');
             statusSection.classList.remove('hidden');
             pollingIndicator.classList.remove('hidden');
             
-            // Set initial status message
             if (!statusMessage.textContent.includes('FORBIDDEN')) {
                  statusMessage.textContent = 'Waiting for you to start playing music...';
             }
@@ -325,18 +483,27 @@
                 if (data && data.is_playing) {
                     // --- Case 1: Song is actively playing ---
                     const track = data.item;
-                    
-                    // A. Check if this is a NEW track or if the smooth updater is not running
-                    if (track.id !== currentTrackId || progressUpdaterId === null) {
+                    const artistText = track.artists.map(a => a.name).join(', ');
+
+                    if (track.id !== currentTrackId) {
                         
-                        console.log('New track detected or resumed. Starting smooth update.');
+                        console.log('New track detected or resumed. Starting smooth update and lyric fetch.');
                         
-                        // Clear old smooth interval if exists
+                        // Stop old smooth interval
                         if (progressUpdaterId) clearInterval(progressUpdaterId);
 
-                        // Update metadata
-                        const artistText = track.artists.map(a => a.name).join(', ');
-                        songTitle.textContent = track.name;
+                        // --- NEW LYRICS FETCH/LOAD ---
+                        const trackName = track.name;
+                        
+                        // 1. Fetch lyrics from LRC Lib
+                        currentLyrics = await fetchSyncedLyrics(trackName, artistText);
+                        
+                        // 2. Render lyrics or the "not available" message
+                        renderLyrics(currentLyrics, trackName, artistText);
+                        // ------------------------------------------
+                        
+                        // Update Metadata
+                        songTitle.textContent = trackName;
                         artistName.textContent = artistText;
                         albumName.textContent = track.album.name;
                         albumArt.src = track.album.images[0]?.url || 'https://placehold.co/400x400/1DB954/ffffff?text=No+Art';
@@ -377,12 +544,15 @@
                 } else {
                     // --- Case 2: Nothing playing or music is paused (204 or is_playing=false) ---
                     
-                    // Stop the smooth progress interval
+                    // Stop the smooth progress interval and clear lyrics
                     if (progressUpdaterId) {
                         clearInterval(progressUpdaterId);
                         progressUpdaterId = null;
                     }
                     currentTrackId = null;
+                    currentLyrics = null;
+                    lyricsContent.innerHTML = ''; // Clear the lyric area
+
                     
                     // Check if music is paused
                     if (data && !data.is_playing && data.item) {
@@ -408,17 +578,14 @@
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
 
-            // Clear any existing intervals on fresh load
             if (pollingIntervalId) clearInterval(pollingIntervalId);
             if (progressUpdaterId) clearInterval(progressUpdaterId);
 
             if (code) {
-                // PHASE 2: Callback from Spotify. Exchange the code for an Access Token.
                 statusSection.classList.remove('hidden');
                 statusMessage.textContent = 'Authenticating...';
                 loginSection.classList.add('hidden');
 
-                // Clear the URL to remove the sensitive code parameter
                 history.replaceState(null, '', REDIRECT_URI); 
 
                 accessToken = await getAccessToken(code);
@@ -432,7 +599,6 @@
                 }
 
             } else {
-                // PHASE 1: Initial load. Check if we have an existing token or need to log in.
                 loginSection.classList.remove('hidden');
                 document.getElementById('login-button').addEventListener('click', redirectToAuthCodeFlow);
             }
