@@ -1,86 +1,357 @@
-<!-- Newest Stuff -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Spotify Lyrics Viewer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Now Playing Tracker (PKCE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212; /* Dark Spotify background */
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: #1e1e1e; /* Card background */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 1.5rem;
+        }
+        .spotify-green {
+            background-color: #1DB954;
+            transition: background-color 0.15s ease;
+        }
+        .spotify-green:hover {
+            background-color: #1ed760;
+        }
+        .pulse-icon {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.05); }
+        }
+    </style>
 </head>
 <body>
-  <h1>Spotify Lyrics Viewer</h1>
-  <button id="login">Login with Spotify</button>
-  <h2 id="track"></h2>
-  <pre id="lyrics"></pre>
 
-  <script>
-    const clientId = "86d5980bc6284ccba0515e63ddd32845"; // Replace with your own
-    const redirectUri = window.location.origin + "/Lyrical-Player/"; // GitHub Pages URL
-    const scopes = "user-read-currently-playing user-read-playback-state";
+    <div class="container rounded-xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-white flex items-center justify-center">
+            <svg class="w-8 h-8 mr-2" fill="#1DB954" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.111 17.583c-.156.26-.502.348-.762.193a7.35 7.35 0 0 1-8.524-3.558c-.144-.265-.057-.607.208-.751.265-.144.607-.057.751.208a6.11 6.11 0 0 0 7.103 2.96c.26.155.348.502.193.762zm1.61-3.033c-.167.282-.553.388-.836.222a9.773 9.773 0 0 1-11.232-4.664c-.282-.167-.388-.553-.222-.836.167-.282.553-.388.836-.222a8.553 8.553 0 0 0 9.845 4.103c.282.167.388.553.222.836zm.186-4.636c-1.39-2.327-3.92-3.83-6.666-3.83-2.747 0-5.277 1.503-6.667 3.83-.284.168-.672.062-.84-.223-.167-.285-.062-.672.223-.84C6.556 2.5 9.17 1 12 1s5.444 1.5 6.949 3.84c.285.168.39.555.223.84z"/>
+            </svg>
+            Spotify Tracker
+        </h1>
 
-    // Login button click → redirect to Spotify auth
-    document.getElementById("login").addEventListener("click", () => {
-      const authUrl =
-        "https://accounts.spotify.com/authorize?" +
-        new URLSearchParams({
-          response_type: "token", // 👈 Implicit Grant
-          client_id: clientId,
-          scope: scopes,
-          redirect_uri: redirectUri,
-        });
-      window.location.href = authUrl;
-    });
+        <!-- Login Section -->
+        <div id="login-section" class="mb-6 text-center">
+            <p class="text-gray-300 mb-4">Log in to Spotify to start tracking your current song.</p>
+            <button id="login-button" class="spotify-green text-black font-bold py-3 px-6 rounded-full w-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300">
+                Login with Spotify
+            </button>
+        </div>
 
-    // Extract access_token from hash after redirect
-    function getAccessTokenFromUrl() {
-      if (window.location.hash) {
-        return window.location.hash
-          .substring(1)
-          .split("&")
-          .reduce((acc, cur) => {
-            const [key, val] = cur.split("=");
-            acc[key] = decodeURIComponent(val);
-            return acc;
-          }, {}).access_token;
-      }
-      return null;
-    }
+        <!-- Song Status Section -->
+        <div id="status-section" class="hidden text-center">
+            <div id="status-message" class="text-xl font-semibold mb-4 text-white"></div>
+            
+            <div id="song-display" class="hidden bg-gray-800 p-4 rounded-lg text-left shadow-inner">
+                <img id="album-art" class="w-full h-auto rounded-lg mb-4 shadow-md" alt="Album Art">
+                <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Now Playing</p>
+                <h2 id="song-title" class="text-2xl font-bold mt-1 text-white"></h2>
+                <p id="artist-name" class="text-lg text-gray-300"></p>
+                <p id="album-name" class="text-sm text-gray-400 mt-2"></p>
+                <div id="progress-bar-container" class="mt-4 h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full spotify-green transition-all duration-500" style="width: 0%;"></div>
+                </div>
+            </div>
 
-    const accessToken = getAccessTokenFromUrl();
+            <!-- Polling Indicator -->
+            <p id="polling-indicator" class="mt-4 text-sm text-gray-500 hidden">
+                <span class="inline-block h-3 w-3 rounded-full spotify-green mr-2 pulse-icon"></span>
+                Checking for playback...
+            </p>
+        </div>
+    </div>
 
-    async function getCurrentTrack() {
-      if (!accessToken) return;
+    <script>
+        // --- IMPORTANT: CONFIGURE THESE VALUES ---
+        const CLIENT_ID = '86d5980bc6284ccba0515e63ddd32845'; // <<< You must replace this with your Spotify Client ID
+        // The REDIRECT_URI MUST be registered exactly in your Spotify Developer App settings.
+        const REDIRECT_URI = 'https://bennyboy21.github.io/Lyric-Player/'; // Updated as requested
+        // ------------------------------------------
 
-      try {
-        const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-          headers: { Authorization: "Bearer " + accessToken }
-        });
+        const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';
+        const TOKEN_URL = 'https://accounts.spotify.com/api/token';
+        const NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing';
+        const SCOPE = 'user-read-currently-playing';
 
-        if (res.status === 204) {
-          document.getElementById("track").innerText = "No track currently playing.";
-          return;
+        let accessToken = null;
+        let pollingIntervalId = null;
+
+        // --- UI Element References ---
+        const loginSection = document.getElementById('login-section');
+        const statusSection = document.getElementById('status-section');
+        const statusMessage = document.getElementById('status-message');
+        const songDisplay = document.getElementById('song-display');
+        const songTitle = document.getElementById('song-title');
+        const artistName = document.getElementById('artist-name');
+        const albumName = document.getElementById('album-name');
+        const albumArt = document.getElementById('album-art');
+        const progressBar = document.getElementById('progress-bar');
+        const pollingIndicator = document.getElementById('polling-indicator');
+
+        // --- PKCE Helper Functions ---
+
+        /** Generates a cryptographically secure random string. */
+        function generateRandomString(length) {
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const randomValues = crypto.getRandomValues(new Uint8Array(length));
+            return randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
         }
 
-        const data = await res.json();
-        const track = data.item;
+        /** Base64-URL encodes a buffer. */
+        function base64urlencode(buffer) {
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
 
-        document.getElementById("track").innerText =
-          `🎵 Now Playing: ${track.name} - ${track.artists.map(a => a.name).join(", ")}`;
+        /** Creates a SHA256 hash and converts it to a base64 URL-safe string. */
+        async function sha256(plain) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plain);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return base64urlencode(hash);
+        }
 
-        // Placeholder for lyrics (can hook Genius later)
-        document.getElementById("lyrics").innerText =
-          `Lyrics for ${track.name} by ${track.artists[0].name}... (coming soon)`;
+        // --- Authentication Flow ---
 
-      } catch (err) {
-        console.error(err);
-        document.getElementById("track").innerText = "Error fetching track";
-      }
-    }
+        function redirectToAuthCodeFlow() {
+            if (CLIENT_ID === '86d5980bc6284ccba0515e63ddd32845') {
+                // IMPORTANT: Since alert() is restricted, log to console and set a UI message instead
+                console.error('ERROR: Please update CLIENT_ID in the script.');
+                document.getElementById('status-message').textContent = 'ERROR: Please replace "YOUR_CLIENT_ID" in the script and reload.';
+                document.getElementById('status-message').classList.remove('hidden');
+                loginSection.classList.add('hidden');
+                return;
+            }
 
-    // If logged in, start polling Spotify every 5s
-    if (accessToken) {
-      getCurrentTrack();
-      setInterval(getCurrentTrack, 5000);
-    }
-  </script>
+            // 1. Create and store a code verifier
+            const codeVerifier = generateRandomString(128);
+            localStorage.setItem('code_verifier', codeVerifier);
+
+            // 2. Hash the code verifier to get the code challenge
+            sha256(codeVerifier).then(codeChallenge => {
+                const params = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: CLIENT_ID,
+                    scope: SCOPE,
+                    code_challenge_method: 'S256',
+                    code_challenge: codeChallenge,
+                    redirect_uri: REDIRECT_URI,
+                });
+
+                // 3. Redirect the user to the Spotify authorization page
+                window.location.href = `${AUTHORIZE_URL}?${params.toString()}`;
+            }).catch(e => {
+                console.error("Error generating code challenge:", e);
+            });
+        }
+
+        async function getAccessToken(code) {
+            const codeVerifier = localStorage.getItem('code_verifier');
+            if (!codeVerifier) {
+                console.error("Code verifier not found.");
+                return null;
+            }
+            
+            // Clear verifier after use
+            localStorage.removeItem('code_verifier'); 
+
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                code_verifier: codeVerifier,
+            });
+
+            try {
+                const response = await fetch(TOKEN_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString(),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Token request failed with status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Store the token (optional: store refresh token too if you want long-lived access)
+                return data.access_token;
+            } catch (error) {
+                console.error('Error fetching access token:', error);
+                return null;
+            }
+        }
+
+        // --- Spotify API Interaction ---
+
+        /** Fetches the currently playing song from Spotify. */
+        async function fetchCurrentlyPlaying() {
+            try {
+                const response = await fetch(NOW_PLAYING_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (response.status === 204) {
+                    // 204 No Content: Nothing is playing or no active device
+                    return null;
+                }
+
+                if (!response.ok) {
+                    // Check for token expiration (401 Unauthorized)
+                    if (response.status === 401) {
+                        console.error("Access Token expired or invalid. Please re-login.");
+                        // Handle re-login flow (or refresh token flow if implemented)
+                        // Note: For simplicity, we just redirect back to the home page to restart the auth flow.
+                        setTimeout(() => {
+                           window.location.href = REDIRECT_URI;
+                        }, 100);
+                        return null;
+                    }
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                return await response.json();
+
+            } catch (error) {
+                console.error('Error fetching currently playing track:', error);
+                // Stop polling on critical errors
+                clearInterval(pollingIntervalId);
+                statusMessage.textContent = 'An API error occurred. Check console.';
+                pollingIndicator.classList.add('hidden');
+                return null;
+            }
+        }
+
+        /** Main logic to poll for the currently playing song until one is found. */
+        function pollForSong() {
+            // Show status and hide login
+            loginSection.classList.add('hidden');
+            statusSection.classList.remove('hidden');
+            songDisplay.classList.add('hidden');
+            pollingIndicator.classList.remove('hidden');
+            
+            statusMessage.textContent = 'Waiting for you to start playing music...';
+
+            pollingIntervalId = setInterval(async () => {
+                const data = await fetchCurrentlyPlaying();
+                
+                // If fetchCurrentlyPlaying returned null due to 204 or 401
+                if (!data) {
+                    // If 401 was hit, redirection is handled inside fetchCurrentlyPlaying
+                    if (!pollingIntervalId) return; 
+
+                    console.log('No active playback found. Continuing to poll...');
+                    statusMessage.textContent = 'Waiting for you to start playing music...';
+                    songDisplay.classList.add('hidden');
+                    return;
+                }
+                
+                // 2. Something is playing, but it's paused
+                if (!data.is_playing) {
+                    const artistText = data.item.artists.map(a => a.name).join(', ');
+                    statusMessage.textContent = `Music is paused: ${data.item.name} by ${artistText}`;
+                    songDisplay.classList.add('hidden');
+                    return;
+                }
+
+                // 3. SUCCESS: Song is actively playing
+                if (data.is_playing) {
+                    clearInterval(pollingIntervalId); // Stop polling! We found the song.
+                    pollingIntervalId = null;
+                    
+                    console.log('Playback started. Stopping poll.');
+                    pollingIndicator.classList.add('hidden');
+                    statusMessage.classList.add('hidden');
+                    songDisplay.classList.remove('hidden');
+
+                    const track = data.item;
+                    const artistText = track.artists.map(a => a.name).join(', ');
+                    const progressMs = data.progress_ms;
+                    const durationMs = track.duration_ms;
+                    const progressPercent = (progressMs / durationMs) * 100;
+
+                    // Update UI elements
+                    songTitle.textContent = track.name;
+                    artistName.textContent = artistText;
+                    albumName.textContent = track.album.name;
+                    albumArt.src = track.album.images[0]?.url || 'https://placehold.co/400x400/1DB954/ffffff?text=No+Art';
+                    progressBar.style.width = `${progressPercent}%`;
+                    
+                    // Display the "found" message briefly before showing the track
+                    setTimeout(() => {
+                         statusMessage.textContent = 'Currently Playing:';
+                         statusMessage.classList.remove('hidden');
+                    }, 100);
+
+                    // If you wanted to continuously update the progress bar, you would start a new, faster interval here.
+                }
+
+            }, 5000); // Check every 5 seconds (5000ms)
+        }
+
+        // --- Main Initialization ---
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+
+            if (code) {
+                // PHASE 2: Callback from Spotify. Exchange the code for an Access Token.
+                statusSection.classList.remove('hidden');
+                statusMessage.textContent = 'Authenticating...';
+                loginSection.classList.add('hidden');
+
+                // Clear the URL to remove the sensitive code parameter
+                // We use history.replaceState to modify the current URL without adding a new history entry
+                history.replaceState(null, '', REDIRECT_URI); 
+
+                accessToken = await getAccessToken(code);
+                
+                if (accessToken) {
+                    console.log("Successfully retrieved access token.");
+                    pollForSong();
+                } else {
+                    statusMessage.textContent = 'Authentication failed. Check console for details.';
+                    loginSection.classList.remove('hidden');
+                }
+
+            } else {
+                // PHASE 1: Initial load. Check if we have an existing token or need to log in.
+                // For this simple app, we force login if no code is present.
+                loginSection.classList.remove('hidden');
+                document.getElementById('login-button').addEventListener('click', redirectToAuthCodeFlow);
+            }
+        }
+
+        // Run the main function on page load
+        init();
+    </script>
 </body>
 </html>
