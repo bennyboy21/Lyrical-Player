@@ -257,7 +257,7 @@
                 }
                 
                 const results = await response.json();
-                // console.log(results)
+                console.log(results)
                 
                 if (results.length > 0 && results[0].plainLyrics && results[0].syncedLyrics) {
                     console.log(`LRC Lib Success: Found synced lyrics for "${trackName}"`);
@@ -541,7 +541,7 @@
                         progressStartTime = Date.now();
                         
                         // Start the smooth update interval (runs every 500ms)
-                        progressUpdaterId = setInterval(smoothUpdateProgress, 200);
+                        progressUpdaterId = setInterval(smoothUpdateProgress, 250);
 
                         // Initial manual update to ensure immediate display
                         smoothUpdateProgress();
