@@ -190,27 +190,24 @@
         }
 
         /** * Cleans up track titles by removing common metadata in parentheses or brackets 
-         * and removing punctuation that might interfere with string matching. 
+         * to improve matching accuracy with LRC APIs. 
          */
         function cleanTrackTitle(title) {
-            // 1. Remove text in parentheses (e.g., (Live), (Remix)) and brackets (e.g., [Explicit])
-            let cleaned = title.replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ');
-            
-            // 2. Remove common features/mixes/versions (e.g., "feat. Artist", " - Radio Edit")
-            cleaned = cleaned.replace(/\s(feat|ft)\..*/i, '');
-            cleaned = cleaned.replace(/\s-\s(Radio|Album|Single|Original|Acoustic|Remastered|20\d{2})\s(Edit|Mix|Version).*/i, '');
-            
-            // 3. Remove most punctuation (except for internal spaces)
-            cleaned = cleaned.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-            
-            // 4. Clean up multiple spaces left over and trim
+            // 1. Remove text in parentheses (e.g., (Live), (Remix))
+            let cleaned = title.replace(/\s*\(.*?\)\s*/g, ' ');
+            // 2. Remove text in brackets (e.g., [Explicit], [Official Video])
+            cleaned = cleaned.replace(/\s*\[.*?\]\s*/g, ' ');
+            // 3. Remove common features/mixes (e.g., "feat. Artist", " - Radio Edit")
+            cleaned = cleaned.replace(/\s(feat|ft)\..*/i, '').replace(/\s-\s(Radio|Album|Single|Original)\s(Edit|Mix|Version).*/i, '').trim();
+            // 4. Clean up multiple spaces left over
             return cleaned.replace(/\s+/g, ' ').trim();
         }
         
-        /** * Parses LRC content into a structured array of lyric lines with time in milliseconds. */
+        /** * Parses LRC content into a structured array of lyric lines with time in milliseconds.
+         * LRC format: [mm:ss.xx] Lyric text
+         */
         function parseLrc(lrcContent) {
             const lines = [];
-            // Regex handles [mm:ss.xx] or [mm:ss.xxx]
             const lrcRegex = /^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
 
             lrcContent.split('\n').forEach(line => {
@@ -224,68 +221,58 @@
 
                     const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
                     
-                    // Only add lines that have some text or a valid timestamp
-                    if (timeMs >= 0) {
-                       lines.push({ time: timeMs, text: text });
-                    }
+                    lines.push({ time: timeMs, text: text });
                 }
             });
             
+            // Sort by time just in case
             lines.sort((a, b) => a.time - b.time);
             
             return lines;
         }
 
-        /** Helper function to execute the fetch call and handle basic errors. */
-        async function performLrcQuery(url) {
-            try {
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    console.warn(`LRC Lib API failed: ${response.status} for URL: ${decodeURIComponent(url)}`);
-                    return null;
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error("Error performing LRC Lib fetch:", error);
-                return null;
-            }
-        }
-
 
         // --- Lyrics Management (LRC Lib Integration) ---
         
-        /** Fetches synchronized lyrics from LRC Lib using a two-step approach. */
+        /** Fetches synchronized lyrics from LRC Lib. */
         async function fetchSyncedLyrics(trackName, artistName) {
             // Display a loading message immediately
             lyricsContent.innerHTML = '<p class="text-gray-400 italic mt-4 text-center">Fetching synchronized lyrics...</p>';
             
+            // Clean the track name for better API matching
             const cleanedTrackName = cleanTrackTitle(trackName);
-            let results = null;
-
-            // --- Query 1: Cleaned Track Name + Artist Name (Most accurate) ---
-            let url1 = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=&limit=1`;
-            console.log(`LRC Lib Query 1 (Track + Artist): Track="${cleanedTrackName}", Artist="${artistName}"`);
-
-            results = await performLrcQuery(url1);
-            if (results && results.length > 0 && results[0].lrc && results[0].synced) {
-                console.log(`LRC Lib Success via Query 1!`);
-                return parseLrc(results[0].lrc);
-            }
             
-            // --- Fallback Query 2: Only Cleaned Track Name (Broader search) ---
-            let url2 = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&limit=1`;
-            console.log(`LRC Lib Query 2 (Track Only Fallback): Track="${cleanedTrackName}"`);
-            
-            results = await performLrcQuery(url2);
-            if (results && results.length > 0 && results[0].lrc && results[0].synced) {
-                console.log(`LRC Lib Success via Query 2 (Fallback)!`);
-                return parseLrc(results[0].lrc);
-            }
+            // Log the clean query parameters for debugging
+            console.log(`LRC Lib Querying with: Track="${cleanedTrackName}", Artist="${artistName}"`);
 
-            console.log(`LRC Lib Failure: No synced result found after 2 attempts for "${trackName}"`);
-            return null;
+            const url = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&artist_name=${encodeURIComponent(artistName)}&album_name=&limit=1`;
+
+            try {
+                const response = await fetch(url);
+                console.log(response)
+                
+                if (!response.ok) {
+                    console.error(`LRC Lib API failed: ${response.status}`);
+                    return null;
+                }
+                
+                const results = await response.json();
+                
+                if (results.length > 0 && results[0].lrc && results[0].synced) {
+                    console.log(`LRC Lib Success: Found synced lyrics for "${trackName}"`);
+                    // Success: Found synced LRC content
+                    return parseLrc(results[0].lrc);
+                }
+                
+                console.log(`LRC Lib Failure: No synced result found for "${trackName}"`);
+
+                // Failure: No synchronized lyrics found
+                return null;
+                
+            } catch (error) {
+                console.error("Error fetching lyrics from LRC Lib:", error);
+                return null;
+            }
         }
 
 
@@ -312,8 +299,7 @@
                         <br><span class="font-semibold text-white">"${trackName}" by ${artistName}</span>
                     </p>
                     <p class="text-gray-500 text-xs mt-2">
-                        (The lyric search was performed using a cleaned title: "${cleanTrackTitle(trackName)}". 
-                        Please check the console for the API query details.)
+                        (LRC Lib is a community-sourced database, so coverage varies.)
                     </p>
                 `;
             }
@@ -327,7 +313,6 @@
             let newIndex = -1;
 
             // Find the index of the line whose time is less than or equal to the current progress
-            // We use the last line found to be active (i.e., the one closest to the current time, but before it)
             for (let i = lines.length - 1; i >= 0; i--) {
                 if (progressMs >= lines[i].time) {
                     newIndex = i;
@@ -451,7 +436,6 @@
                     
                     if (response.status === 401) {
                         console.error("Access Token expired or invalid. Attempting re-login.");
-                        // Redirect to force re-login and token refresh
                         setTimeout(() => {
                            window.location.href = REDIRECT_URI;
                         }, 100);
@@ -460,7 +444,7 @@
                     
                     if (response.status === 403) {
                          console.error(`API Error 403 (Forbidden): The token is valid but lacks permission. Details: ${errorDetails}`);
-                         statusMessage.textContent = `403 FORBIDDEN: You may need to add this Spotify account as a 'User' in your app's 'Users and Access' settings in the Spotify Developer Dashboard.`;
+                         statusMessage.textContent = `403 FORBIDDEN: Please ensure the Spotify account you logged in with is added as a 'User' in your app's 'Users and Access' settings in the Spotify Developer Dashboard.`;
                          throw new Error(`API Error 403 Forbidden: Missing scope or account whitelisting issue.`);
                     }
 
@@ -511,6 +495,7 @@
         function pollForSong() {
             loginSection.classList.add('hidden');
             statusSection.classList.remove('hidden');
+            pollingIndicator.classList.remove('hidden');
             
             if (!statusMessage.textContent.includes('FORBIDDEN')) {
                  statusMessage.textContent = 'Waiting for you to start playing music...';
@@ -580,8 +565,6 @@
                             progressStartTime = Date.now();
                         }
                     }
-
-                    pollingIndicator.classList.add('hidden');
 
                 } else {
                     // --- Case 2: Nothing playing or music is paused (204 or is_playing=false) ---
