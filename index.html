@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lyrify - Sync Spotify Lyrics</title>
-    <!-- Removed Tailwind CSS for a pure CSS/HTML/JS solution -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* General Reset & Typography */
@@ -56,7 +55,6 @@
 
         /* --- LANDING PAGE STYLES (Phase 1) --- */
         #login-section {
-            /* Converted: rounded-xl, text-center, max-w-420px, w-90%, gradient, shadow, padding */
             border-radius: 0.75rem;
             max-width: 420px; 
             width: 90%; 
@@ -67,24 +65,21 @@
             transition: opacity 0.5s ease-in;
         }
         #login-section h1 {
-            /* Converted: text-6xl, font-extrabold, mb-4 */
             font-size: 3.75rem;
             font-weight: 800;
             margin-bottom: 1rem;
             color: #ffffff;
         }
         #login-message {
-            /* Converted: text-xl, text-gray-400, mb-8 */
             font-size: 1.25rem;
-            color: #9ca3af; /* A shade of gray-400 */
+            color: #9ca3af; 
             margin-bottom: 2rem;
         }
         #login-button {
-            /* Converted: py-4, px-10, rounded-full, w-full, max-w-sm, text-black, font-bold, shadow-xl */
             padding: 1rem 2.5rem;
             border-radius: 9999px;
             width: 100%;
-            max-width: 24rem; /* max-w-sm */
+            max-width: 24rem; 
             color: #000000;
             font-weight: 700;
             border: none;
@@ -95,13 +90,11 @@
             box-shadow: 0 20px 25px rgba(0, 0, 0, 0.4), 0 8px 10px rgba(0, 0, 0, 0.1);
         }
         #login-button-text {
-             /* Converted: text-2xl */
             font-size: 1.5rem;
         }
         #login-section > p:last-child {
-            /* Converted: text-xs, text-gray-500, mt-6 */
             font-size: 0.75rem;
-            color: #6b7280; /* A shade of gray-500 */
+            color: #6b7280; 
             margin-top: 1.5rem;
         }
 
@@ -111,7 +104,7 @@
             height: 100vh;
             max-width: none;
             display: grid;
-            grid-template-rows: 1fr; /* Full height grid for mobile/default */
+            grid-template-rows: 1fr; 
             background-color: transparent;
         }
         
@@ -124,6 +117,23 @@
             padding: 2rem;
             text-align: center;
             overflow: hidden; 
+            position: relative; /* CRITICAL: For positioning the marker */
+        }
+        
+        /* New: Fixed horizontal line marker */
+        #active-line-marker {
+            position: absolute;
+            top: 50%; /* Center vertically */
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            width: 100%; 
+            max-width: 80rem; 
+            height: 2px;
+            background: rgba(29, 185, 84, 0.7); /* Translucent Spotify green */
+            z-index: 10; 
+            transition: opacity 0.5s ease;
+            pointer-events: none; 
+            opacity: 0; /* Default hidden, controlled by JS */
         }
 
         .lyrics-box {
@@ -144,43 +154,44 @@
             font-size: 1.5rem; 
             font-weight: 500;
             padding: 0.75rem 0;
+            /* Added translateY(10px) for the 'pop up' effect when active */
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
             opacity: 0.6;
-            transform: scale(0.85); 
+            transform: scale(0.85) translateY(10px); 
             text-shadow: none;
             white-space: pre-wrap;
             box-sizing: border-box; 
-            margin-left: auto; /* mx-auto */
+            margin-left: auto; 
             margin-right: auto;
-            max-width: 80rem; /* max-w-4xl (approx) */
+            max-width: 80rem; 
         }
 
-        /* Active Lyric Line Style (TikTok Effect) */
+        /* Active Lyric Line Style (Pop-Up / TikTok Effect) */
         .lyric-line.active {
             color: #ffffff;
             font-weight: 800;
             font-size: 3.5rem; 
             opacity: 1;
-            transform: scale(1.05);
+            /* Reset vertical translate to 0 for the pop-up */
+            transform: scale(1.05) translateY(0); 
             text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5);
         }
         
         /* Media Column Styles */
         #status-message {
-            font-size: 1.25rem; /* text-xl */
-            font-weight: 600; /* font-semibold */
-            margin-bottom: 1rem; /* mb-4 */
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            margin-bottom: 1rem; 
             color: #ffffff;
             width: 100%;
         }
 
         #song-display {
             width: 100%;
-            max-width: 20rem; /* max-w-xs on mobile */
+            max-width: 20rem; 
         }
 
         #album-art {
-            /* Converted: w-full, h-auto, rounded-xl, mb-6, shadow-2xl */
             width: 100%;
             height: auto;
             border-radius: 0.75rem;
@@ -190,8 +201,7 @@
             transition: all 0.5s ease;
         }
 
-        #song-display > p:nth-of-type(1) { /* Now Playing */
-            /* Converted: text-sm, text-gray-400, font-medium, uppercase, tracking-wider, mb-1 */
+        #song-display > p:nth-of-type(1) { 
             font-size: 0.875rem;
             color: #9ca3af;
             font-weight: 500;
@@ -201,7 +211,6 @@
         }
 
         #song-title {
-            /* Converted: text-3xl, font-extrabold, text-white, leading-tight */
             font-size: 1.875rem;
             font-weight: 800;
             color: #ffffff;
@@ -209,14 +218,12 @@
         }
 
         #artist-name {
-            /* Converted: text-xl, text-gray-300, mt-1 */
             font-size: 1.25rem;
             color: #d1d5db;
             margin-top: 0.25rem;
         }
 
         #album-name {
-            /* Converted: text-md, text-gray-500, mt-3 */
             font-size: 1rem;
             color: #6b7280;
             margin-top: 0.75rem;
@@ -224,22 +231,19 @@
 
         /* Progress Bar */
         #progress-bar-container {
-            /* Converted: mt-1, h-2, bg-gray-800, rounded-full, overflow-hidden */
             margin-top: 0.25rem;
             height: 0.5rem;
-            background-color: #1f2937; /* bg-gray-800 */
+            background-color: #1f2937; 
             border-radius: 9999px;
             overflow: hidden;
         }
 
         #progress-bar {
-            /* Converted: h-full, spotify-green, transition-all, duration-300, ease-linear */
             height: 100%;
             transition: width 0.3s linear;
         }
         
         #time-text {
-            /* Converted: text-sm, text-gray-500, font-mono, mt-2, flex, justify-between */
             font-size: 0.875rem;
             color: #6b7280;
             font-family: monospace;
@@ -250,13 +254,11 @@
         
         /* Polling Indicator */
         #polling-indicator {
-            /* Converted: mt-8, text-sm, text-gray-500 */
             margin-top: 2rem;
             font-size: 0.875rem;
             color: #6b7280;
         }
         #polling-indicator svg {
-            /* Converted: w-4, h-4, mr-2, inline-block, text-[#1DB954] */
             width: 1rem;
             height: 1rem;
             margin-right: 0.5rem;
@@ -269,12 +271,10 @@
         /* Desktop/Large Screen Layout (min-width: 1024px) */
         @media (min-width: 1024px) {
             #status-section {
-                /* Converted: grid-template-columns: 35% 65% */
                 grid-template-columns: 35% 65%; 
             }
 
             .media-column {
-                /* Converted: display: flex, flex-direction: column, justify-content: center, align-items: center, padding: 3rem, height: 100vh, background: #0d0d0d, shadow */
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -283,11 +283,11 @@
                 height: 100vh;
                 background: #0d0d0d; 
                 box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
-                width: auto !important; /* lg:w-auto */
+                width: auto !important; 
             }
 
             #song-display {
-                max-width: none; /* lg:max-w-none */
+                max-width: none; 
             }
 
             .lyrics-column {
@@ -298,10 +298,10 @@
 
             /* Make the active lyric even larger for desktop */
             .lyric-line.active {
-                font-size: 5rem; /* lg:text-5xl */
+                font-size: 5rem; 
             }
             .lyric-line {
-                font-size: 2rem; /* lg:text-2xl */
+                font-size: 2rem; 
             }
         }
         
@@ -309,19 +309,18 @@
         @media (max-width: 1023px) {
             #status-section {
                 padding: 1rem;
-                /* On mobile, allow vertical scrolling */
                 overflow-y: auto; 
-                display: block; /* Change grid to block layout for stacking */
+                display: block; 
             }
             .lyrics-column, .media-column {
-                height: auto; /* Allow content to dictate height */
+                height: auto; 
                 padding: 1rem;
                 width: 100%;
                 background: none;
                 box-shadow: none;
             }
             .lyrics-box {
-                height: 50vh; /* Half the screen for lyrics on mobile */
+                height: 50vh; 
             }
             .lyric-line.active {
                 font-size: 2.25rem;
@@ -391,6 +390,9 @@
 
         <!-- RIGHT COLUMN: Lyrics Display (Desktop: 65%, Mobile: Stacked) -->
         <div id="lyrics-column" class="lyrics-column">
+            <!-- New: The fixed horizontal line marker -->
+            <div id="active-line-marker"></div> 
+            
             <!-- Lyrics will be inserted here -->
             <div class="lyrics-box" id="lyrics-content">
                 <!-- Content is empty until polling starts -->
@@ -448,6 +450,7 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
+        const activeLineMarker = document.getElementById('active-line-marker'); // New marker reference
 
 
         // --- Utility Functions ---
@@ -575,11 +578,11 @@
             activeLyricIndex = -1; // Reset lyric state
             
             if (lyrics && lyrics.length > 0) {
+                activeLineMarker.style.opacity = '1'; // Show the line marker
                 lyricsContent.innerHTML = '';
                 
                 // Add a dummy spacer element to help vertically center the active line
                 const spacer = document.createElement('div');
-                spacer.className = 'w-full h-[50vh] flex-shrink-0'; 
                 spacer.style.width = '100%';
                 spacer.style.height = '50vh';
                 spacer.style.flexShrink = '0';
@@ -605,6 +608,7 @@
                 lyricsContent.style.overflowY = 'scroll';
                 
             } else {
+                activeLineMarker.style.opacity = '0'; // Hide the line marker
                 // Show "Not Available" message
                 lyricsContent.style.overflowY = 'hidden';
                 lyricsContent.style.justifyContent = 'center';
@@ -796,6 +800,7 @@
             lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">
                 Spotify connected. Checking for active playback...
             </p>`;
+            activeLineMarker.style.opacity = '0'; // Hide line marker initially
 
             pollingIndicator.classList.remove('hidden');
 
@@ -856,6 +861,8 @@
                     }
                     currentTrackId = null;
                     currentLyrics = null;
+                    
+                    activeLineMarker.style.opacity = '0'; // Hide line marker when no music
                     
                     if (data && !data.is_playing && data.item) {
                         const artistText = data.item.artists.map(a => a.name).join(', ');
