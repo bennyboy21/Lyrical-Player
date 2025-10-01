@@ -120,6 +120,23 @@
             overflow: hidden; 
             position: relative; /* CRITICAL: For positioning the marker */
         }
+
+        /* New: Fixed horizontal line marker */
+        #active-line-marker {
+            position: absolute;
+            top: 50%; /* Center vertically */
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            width: 100%; 
+            max-width: 80rem; 
+            height: 2px;
+            background: rgba(29, 185, 84, 0.7); /* Translucent Spotify green */
+            z-index: 10; 
+            transition: opacity 0.5s ease;
+            pointer-events: none; 
+            opacity: 0; /* Default hidden, controlled by JS */
+        }
+
         
         .lyrics-box {
             width: 100%;
@@ -380,6 +397,8 @@
 
         <!-- RIGHT COLUMN: Lyrics Display (Desktop: 65%, Mobile: Stacked) -->
         <div id="lyrics-column" class="lyrics-column">
+            <!-- New: The fixed horizontal line marker -->
+            <div id="active-line-marker"></div> 
             
             <!-- Lyrics will be inserted here -->
             <div class="lyrics-box" id="lyrics-content">
@@ -440,6 +459,7 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
+        const activeLineMarker = document.getElementById('active-line-marker');
 
 
         // --- Utility Functions ---
