@@ -56,8 +56,7 @@
 
         /* --- LANDING PAGE STYLES (Phase 1) --- */
         #login-section {
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
+            border-radius: 0.75rem;
             max-width: 420px; 
             width: 90%; 
             background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
@@ -65,9 +64,6 @@
             padding: 3rem;
             opacity: 1;
             transition: opacity 0.5s ease-in;
-            position:absolute;
-            bottom:0px;
-            right:25px;
         }
         #login-section h1 {
             font-size: 3.75rem;
@@ -105,10 +101,18 @@
 
         /* --- POST-LOGIN LYRICS PAGE STYLES (Phase 2) --- */
         #status-section {
-            width: 100%;
-            height: 100vh;
-            max-width: none;
-            background-color: transparent;
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            max-width: 420px; 
+            width: 90%; 
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+            padding: 3rem;
+            opacity: 1;
+            transition: opacity 0.5s ease-in;
+            position:absolute;
+            bottom:0px;
+            right:25px;
         }
         
         .lyrics-column {
