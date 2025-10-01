@@ -154,7 +154,7 @@
             transform:translate(-50%, -50%);
         }
 
-        /* Base Lyric Line Style */
+        /* Base Lyric Line Style (Centered Scroll Default) */
         .lyric-line {
             line-height: 1.5;
             color: #7d7d7d; /* Muted gray for non-active lines */
@@ -173,17 +173,33 @@
             max-width: 80rem; 
         }
 
-        /* Active Lyric Line Style (Pop-Up / TikTok Effect) */
+        /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) */
         .lyric-line.active {
             color: #ffffff;
             font-weight: 800;
             font-size: 3.5rem; 
             opacity: 1;
-            /* Reset vertical translate to 0 for the pop-up */
+            /* Reset vertical translate to 0 for the pop-up, horizontal translate reset by JS */
             transform: scale(1.05) translateY(0); 
             /* text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5); */
         }
         
+        /* --- NEW: Explosion Pop Style --- */
+        
+        /* The base .lyric-line handles the initial state (scale/translate) */
+
+        /* Specific styling for inactive lines in Explosion Pop */
+        .lyric-line.explosion-pop:not(.active) {
+            /* New: Inactive lines are slightly smaller and have random X-offsets applied by JS */
+            font-size: 1.5rem; 
+            opacity: 0.6; 
+            /* Important: Ensures the random X-translate is smoothly animated */
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+
+        /* Explosion Pop Active line inherits .lyric-line.active, but the JS ensures 
+           its specific transform (with random X) is cleared for centering. */
+
         /* Media Column Styles */
         #status-message {
             font-size: 1.25rem; 
@@ -318,6 +334,9 @@
             .lyric-line {
                 font-size: 2rem; 
             }
+            .lyric-line.explosion-pop:not(.active) {
+                font-size: 2rem; /* Keep inactive lines smaller for this style on desktop too */
+            }
         }
         
         /* Mobile Layout Adjustments (max-width: 1023px) */
@@ -353,9 +372,6 @@
 </head>
 <body>
 
-    <!-- ============================================== -->
-    <!-- PHASE 1: LANDING & LOGIN (Visible by default) -->
-    <!-- ============================================== -->
     <div id="login-section" class="text-center">
         <h1>Lyrify</h1>
         <p id="login-message">
@@ -372,12 +388,8 @@
         </p>
     </div>
 
-    <!-- ============================================== -->
-    <!-- PHASE 2: TRACKER & LYRICS (Hidden by default) -->
-    <!-- ============================================== -->
     <div id="status-section" class="hidden">
         
-        <!-- LEFT COLUMN: Media Display (Desktop: 35%, Mobile: Stacked) -->
         <div id="media-column" class="media-column">
             <div id="status-message"></div>
             
@@ -389,7 +401,6 @@
                 <p id="artist-name"></p>
                 <p id="album-name"></p>
                 
-                <!-- Progress Bar and Time -->
                 <div style="margin-top: 1.5rem;">
                     <div id="progress-bar-container">
                         <div id="progress-bar" class="spotify-green"></div>
@@ -401,25 +412,27 @@
                 </div>
             </div>
 
-            <!-- Polling Indicator -->
             <p id="polling-indicator" class="hidden">
                 <svg class="pulse-icon" style="width:1rem; height:1rem; margin-right: 0.5rem; vertical-align: middle; display: inline-block; color: #1DB954;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 Checking for playback status...
             </p>
+
+            <div id="style-selector-container" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
+                <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
+                <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
+                    <option value="centered-scroll">Centered Scroll (Default)</option>
+                    <option value="explosion-pop">Explosion Pop</option>
+                </select>
+            </div>
         </div>
 
-        <!-- RIGHT COLUMN: Lyrics Display (Desktop: 65%, Mobile: Stacked) -->
         <div id="lyrics-column" class="lyrics-column">
-            <!-- New: The fixed horizontal line marker -->
             <div id="active-line-marker"></div> 
             
-            <!-- Lyrics will be inserted here -->
             <div class="lyrics-box" id="lyrics-content">
-                <!-- Content is empty until polling starts -->
-            </div>
+                </div>
 
-            <!-- Current Single Lyric -->
-        </div>
+            </div>
     </div>
 
     <script>
@@ -446,6 +459,7 @@
         let trackDurationMs = 0;      
         let currentLyrics = null;     // Stores the lyrics object
         let activeLyricIndex = -1;    // Index of the currently highlighted lyric line
+        let currentStyle = 'centered-scroll'; // Tracks the current style
         
         // Storing original login state for restoration on failure
         const originalLoginMessage = `The ultimate synchronized lyric experience for Spotify.<br>See what you hear, in real-time.`;
@@ -473,6 +487,7 @@
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
         const activeLineMarker = document.getElementById('active-line-marker');
+        const styleSelector = document.getElementById('lyric-style'); // NEW: Style selector reference
 
 
         // --- Utility Functions ---
@@ -599,6 +614,9 @@
         function renderLyrics(lyrics, trackName, artistName) {
             activeLyricIndex = -1; // Reset lyric state
             
+            // Get the current style
+            currentStyle = styleSelector.value;
+
             if (lyrics && lyrics.length > 0) {
                 activeLineMarker.style.opacity = '1'; // Show the line marker
                 lyricsContent.innerHTML = '';
@@ -612,9 +630,21 @@
                 
                 lyrics.forEach((line, index) => {
                     const p = document.createElement('p');
-                    p.textContent = line.text || ' '; 
+                    p.textContent = line.text || ' ';
                     p.className = 'lyric-line';
                     p.id = `lyric-line-${index}`;
+                    
+                    // 1. Apply Style Class and Randomization Logic
+                    if (currentStyle === 'explosion-pop') {
+                        p.classList.add('explosion-pop');
+                        
+                        // 2. Apply Random X Offset for the "Explosion Pop" effect
+                        // Offset between -25% and 25% of its container width
+                        const randomX = (Math.random() * 50) - 25;
+                        // Apply the style to the transform to give the 'explosion' effect.
+                        p.style.transform = `scale(0.85) translateY(10px) translateX(${randomX}%)`;
+                    }
+
                     lyricsContent.appendChild(p);
                 });
 
@@ -622,11 +652,11 @@
                 const bottomSpacer = document.createElement('div');
                 bottomSpacer.style.width = '100%';
                 bottomSpacer.style.height = '50vh';
-                bottomSpacer.style.flexShrink = '0'; 
+                bottomSpacer.style.flexShrink = '0';
                 lyricsContent.appendChild(bottomSpacer);
                 
                 // Prepare the lyrics container for dynamic scrolling
-                lyricsContent.style.justifyContent = 'flex-start'; 
+                lyricsContent.style.justifyContent = 'flex-start';
                 lyricsContent.style.overflowY = 'scroll';
                 
             } else {
@@ -666,6 +696,11 @@
                 if (activeLyricIndex !== -1) {
                     const oldLine = document.getElementById(`lyric-line-${activeLyricIndex}`);
                     if (oldLine) oldLine.classList.remove('active');
+                    
+                    // NEW: If switching from active, and in explosion-pop mode, re-apply the random transform
+                    if (currentStyle === 'explosion-pop' && oldLine) {
+                         // We don't re-calculate, we let the original transform stick
+                    }
                 }
 
                 // Activate the new line
@@ -673,8 +708,13 @@
                     const newLine = document.getElementById(`lyric-line-${newIndex}`);
                     if (newLine) {
                         newLine.classList.add('active');
-                        // Scroll to center the newly active line
                         
+                        // CRITICAL: Reset the custom transform style for the active line 
+                        // to ensure it snaps to the centered, active style defined in CSS,
+                        // overriding any random X-offset applied by Explosion Pop.
+                        newLine.style.transform = '';
+                        
+                        // Scroll to center the newly active line
                         const targetElement = lyricsContent.children[newIndex + 1];
                         if (targetElement) {
                              targetElement.scrollIntoView({
@@ -947,6 +987,17 @@
                 // Initial load: show login screen and attach handler
                 loginButton.addEventListener('click', redirectToAuthCodeFlow);
             }
+            
+            // NEW: Event listener for style change
+            styleSelector.addEventListener('change', () => {
+                // Only re-render if a track is currently loaded
+                if (currentLyrics) {
+                    // We need to re-render using the currently loaded lyrics to apply the new style classes
+                    const currentTrackTitle = songTitle.textContent;
+                    const currentArtistName = artistName.textContent;
+                    renderLyrics(currentLyrics, currentTrackTitle, currentArtistName);
+                }
+            });
         }
 
         // Run the main function on page load
