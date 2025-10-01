@@ -666,11 +666,6 @@
         // --- Authentication Flow ---
 
         function redirectToAuthCodeFlow() {
-            if (CLIENT_ID === '86d5980bc6284ccba0515e63ddd32845') {
-                loginMessage.innerHTML = '<span style="color:#f87171;">ERROR: Please update CLIENT_ID in the script and reload.</span>';
-                return;
-            }
-
             const codeVerifier = generateRandomString(128);
             localStorage.setItem('code_verifier', codeVerifier);
             console.log("Requested Spotify Scope:", SCOPE);
