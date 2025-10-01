@@ -221,7 +221,7 @@
 
                     const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
                     
-                    lines.push({ time: timeMs, text: text });
+                    lines.push({ time: timeMs + 1000, text: text });
                 }
             });
             
