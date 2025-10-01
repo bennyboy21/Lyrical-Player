@@ -14,6 +14,7 @@
         }
         body {
             font-family: 'Inter', sans-serif;
+            user-select: none;
             background-color: #000000; /* Deep black background */
             color: #ffffff;
             min-height: 100vh;
@@ -120,22 +121,6 @@
             position: relative; /* CRITICAL: For positioning the marker */
         }
         
-        /* New: Fixed horizontal line marker */
-        #active-line-marker {
-            position: absolute;
-            top: 50%; /* Center vertically */
-            left: 50%;
-            transform: translate(-50%, -50%); 
-            width: 100%; 
-            max-width: 80rem; 
-            height: 2px;
-            background: rgba(29, 185, 84, 0.7); /* Translucent Spotify green */
-            z-index: 10; 
-            transition: opacity 0.5s ease;
-            pointer-events: none; 
-            opacity: 0; /* Default hidden, controlled by JS */
-        }
-
         .lyrics-box {
             width: 100%;
             height: 100%;
@@ -156,7 +141,7 @@
             padding: 0.75rem 0;
             /* Added translateY(10px) for the 'pop up' effect when active */
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            opacity: 0.6;
+            opacity: 0;
             transform: scale(0.85) translateY(10px); 
             text-shadow: none;
             white-space: pre-wrap;
@@ -174,7 +159,7 @@
             opacity: 1;
             /* Reset vertical translate to 0 for the pop-up */
             transform: scale(1.05) translateY(0); 
-            text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5);
+            /* text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5); */
         }
         
         /* Media Column Styles */
@@ -298,7 +283,7 @@
 
             /* Make the active lyric even larger for desktop */
             .lyric-line.active {
-                font-size: 5rem; 
+                font-size: 3.5rem; 
             }
             .lyric-line {
                 font-size: 2rem; 
@@ -328,6 +313,11 @@
             .lyric-line {
                 font-size: 1.1rem;
             }
+        }
+
+        ::-webkit-scrollbar {
+            width:0px;
+            height:0px;
         }
     </style>
 </head>
@@ -390,13 +380,13 @@
 
         <!-- RIGHT COLUMN: Lyrics Display (Desktop: 65%, Mobile: Stacked) -->
         <div id="lyrics-column" class="lyrics-column">
-            <!-- New: The fixed horizontal line marker -->
-            <div id="active-line-marker"></div> 
             
             <!-- Lyrics will be inserted here -->
             <div class="lyrics-box" id="lyrics-content">
                 <!-- Content is empty until polling starts -->
             </div>
+
+            <!-- Current Single Lyric -->
         </div>
     </div>
 
@@ -450,7 +440,6 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
-        const activeLineMarker = document.getElementById('active-line-marker'); // New marker reference
 
 
         // --- Utility Functions ---
@@ -879,7 +868,7 @@
                     lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">Start a song on Spotify to see the lyrics here.</p>`;
                 }
 
-            }, 3000); // Main state check every 3 seconds
+            }, 1000); // Main state check every 1 seconds
         }
 
         // --- Main Initialization ---
