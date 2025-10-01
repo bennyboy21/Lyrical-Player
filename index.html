@@ -221,7 +221,9 @@
 
                     const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
                     
-                    lines.push({ time: timeMs + 4000, text: text });
+                    const delay = 4000 // Add a slight delay in ms 
+
+                    lines.push({ time: timeMs + delay, text: text });
                 }
             });
             
@@ -595,7 +597,7 @@
                     pollingIndicator.classList.remove('hidden');
                 }
 
-            }, 5000); // Main state check every 5 seconds
+            }, 1000); // Main state check every 5 seconds
         }
 
         // --- Main Initialization ---
