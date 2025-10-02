@@ -210,18 +210,20 @@
         }
 
         #song-display {
-            width: 100%;
-            max-width: 20rem; 
+            display:flex;
+            align-items:center;
+            gap: 10px;
         }
 
         #album-art {
-            width: 100%;
-            height: auto;
+            width: 95px;
+            height: 95px;
             border-radius: 0.75rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0px 100px 50px rgba(0, 0, 0, 0.7);
             transform: scale(1);
             transition: all 0.5s ease;
+            z-index: -1;
         }
 
         #song-display > p:nth-of-type(1) { 
@@ -233,32 +235,44 @@
             margin-bottom: 0.25rem;
         }
 
+        #song-Info-Text {
+            width:350px;
+            /* background:red; */
+        }
+
         #song-title {
-            font-size: 1.875rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: #ffffff;
-            line-height: 1.25;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+  
         }
 
         #artist-name {
-            font-size: 1.25rem;
+            font-size: 1rem;
             color: #d1d5db;
-            margin-top: 0.25rem;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
         }
 
         #album-name {
             font-size: 1rem;
             color: #6b7280;
-            margin-top: 0.75rem;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
         }
 
         /* Progress Bar */
         #progress-bar-container {
-            margin-top: 0.25rem;
             height: 0.5rem;
             background-color: #1f2937; 
             border-radius: 9999px;
             overflow: hidden;
+            margin-top: -15px;
         }
 
         #progress-bar {
@@ -273,6 +287,7 @@
             margin-top: 0.5rem;
             display: flex;
             justify-content: space-between;
+            margin-bottom:15px;
         }
         
         /* Polling Indicator */
@@ -304,15 +319,14 @@
                 align-items: center;
                 padding: 3rem;
                 height: calc(100vh - 50px);
-                max-height:500px;
+                max-height:160px;
                 background: rgba(13, 13, 13, 0.5); 
                 backdrop-filter: blur(.5rem);
                 box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
-                width: 300px; 
-                border-top-left-radius: 0.75rem;
-                border-top-right-radius: 0.75rem;
+                width: 500px; 
+                border-radius: 0.75rem;
                 position:absolute;
-                bottom:0px;
+                bottom:25px;
                 right:25px;
                 z-index: 2;
             }
@@ -394,21 +408,23 @@
             <div id="status-message"></div>
             
             <div id="song-display" class="hidden text-left">
-                <img id="album-art" alt="Album Art">
-                
-                <p>Now Playing</p>
-                <h2 id="song-title"></h2>
-                <p id="artist-name"></p>
-                <p id="album-name"></p>
-                
-                <div style="margin-top: 1.5rem;">
-                    <div id="progress-bar-container">
-                        <div id="progress-bar" class="spotify-green"></div>
+            <!-- <div id="song-display" class="text-left"> -->
+                <img id="album-art" alt="Album Art" src="ab67616d0000b273407bd04707c463bbb3410737.jpeg">
+                <div id="song-Info-Text">
+                    
+                    <p>Now Playing</p>
+                    <h2 id="song-title">On Top Of The World</h2>
+                    <p id="artist-name">Imagine Dragons</p>
+                    <!-- <p id="album-name">Night Vision</p> -->
+                    <div style="margin-top: 1.5rem;">
+                        <div id="progress-bar-container">
+                            <div id="progress-bar" class="spotify-green"></div>
+                        </div>
+                        <p id="time-text">
+                            <span id="current-time">0:00</span>
+                            <span id="duration-time">0:00</span>
+                        </p>
                     </div>
-                    <p id="time-text">
-                        <span id="current-time">0:00</span>
-                        <span id="duration-time">0:00</span>
-                    </p>
                 </div>
             </div>
 
@@ -417,7 +433,7 @@
                 Checking for playback status...
             </p>
 
-            <div id="style-selector-container" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
+            <div id="style-selector-container" class="hidden" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
                 <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
                 <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
                     <option value="centered-scroll">Centered Scroll (Default)</option>
