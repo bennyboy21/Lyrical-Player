@@ -332,6 +332,25 @@
                 z-index: 2;
             }
 
+            #style-Selection-Section {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 3rem;
+                height: calc(100vh - 50px);
+                max-height:160px;
+                background: rgba(60, 60, 60, 0.5); 
+                backdrop-filter: blur(.5rem);
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
+                width: 200px; 
+                border-radius: 0.75rem;
+                position:absolute;
+                top:25px;
+                right:25px;
+                z-index: 2;
+            }
+
             #song-display {
                 max-width: none; 
             }
@@ -404,6 +423,7 @@
     </div>
 
     <div id="status-section" class="hidden">
+    <!-- <div id="status-section" class=""> -->
         
         <div id="media-column" class="media-column">
             <div id="status-message"></div>
@@ -433,7 +453,9 @@
                 <svg class="pulse-icon" style="width:1rem; height:1rem; margin-right: 0.5rem; vertical-align: middle; display: inline-block; color: #1DB954;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 Checking for playback status...
             </p>
+        </div>
 
+        <div id="style-selection-section" class="hidden">
             <div id="style-selector-container" class="hidden" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
                 <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
                 <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
@@ -492,6 +514,7 @@
         const loginButton = document.getElementById('login-button'); 
         const loginButtonText = document.getElementById('login-button-text'); 
         const mediaColumn = document.getElementById('media-column');
+        const styleSelectionSection = document.getElementById('style-selection-section');
         const statusMessage = document.getElementById('status-message');
         const songDisplay = document.getElementById('song-display');
         const songTitle = document.getElementById('song-title');
@@ -829,6 +852,7 @@
                     if (response.status === 403) {
                          statusMessage.textContent = `403 FORBIDDEN: Your Spotify account is not whitelisted for this app.`;
                          songDisplay.classList.add('hidden');
+                         styleSelectionSection.classList.add('hidden');
                          throw new Error(`API Error 403 Forbidden.`);
                     }
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -920,6 +944,7 @@
                         
                         statusMessage.textContent = ''; // Clear status message
                         songDisplay.classList.remove('hidden');
+                         styleSelectionSection.classList.remove('hidden');
                         pollingIndicator.classList.add('hidden');
                         
                     } else {
@@ -952,6 +977,7 @@
                     }
                     
                     songDisplay.classList.add('hidden');
+                    styleSelectionSection.classList.add('hidden');
                     pollingIndicator.classList.remove('hidden');
                     
                     // Reset lyric view
