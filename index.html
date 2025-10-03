@@ -170,6 +170,7 @@
             margin-left: auto; 
             margin-right: auto;
             max-width: 80rem; 
+            transition: 0.25s;
         }
 
         /* Active Lyric Line Style (Album Art Mask + Glow) */
@@ -198,6 +199,7 @@
                 0 0 10px var(--accent-shadow), /* Soft color glow */
                 0 0 5px rgba(255, 255, 255, 0.5); /* White highlight */
             text-shadow: 0 0 10px rgb(255, 255, 255, 0.25);
+            transition: 0.25s;
         }
         
         /* --- Explosion Pop Style --- */
@@ -206,7 +208,7 @@
         .lyric-line.explosion-pop:not(.active) {
             font-size: 1.5rem; 
             opacity: 0.6; 
-            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
 
