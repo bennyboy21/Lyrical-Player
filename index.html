@@ -161,6 +161,7 @@
             font-size: 1.5rem; 
             font-weight: 500;
             padding: 0.75rem 0;
+            opacity:0;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             transform: scale(1) translateY(10px); 
             text-shadow: none;
@@ -198,8 +199,14 @@
         
         /* Specific styling for inactive lines in Explosion Pop */
         .lyric-line.explosion-pop:not(.active) {
-            font-size: 1.5rem; 
-            opacity: 0.6; 
+            font-size: 1.5rem; /* The size we want for inactive lines */
+            opacity:0;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .lyric-line.explosion-pop.active {
+            opacity:1;
+            transform: scale(1.25);
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
@@ -207,9 +214,9 @@
         
         /* Specific styling for inactive lines in Fade Style */
         .lyric-line.fade:not(.active) {
-            font-size: 2.25rem; /* The size we want for inactive lines */
+            font-size: 1.5rem; /* The size we want for inactive lines */
             transition: all 0.5s ease-out; /* Smooth fade transition */
-            transform: scale(1) translateY(0); /* Remove scale/transform for this style */
+            transform: scale(1.25) translateY(0); /* Remove scale/transform for this style */
         }
         
         /* Specific styling for active lines in Fade Style */
