@@ -23,6 +23,7 @@
         }
 
         body {
+            cursor: none;
             font-family: 'Inter', sans-serif;
             user-select: none;
             background-color: #000000; /* Deep black background */
@@ -95,7 +96,7 @@
             color: #000000;
             font-weight: 700;
             border: none;
-            cursor: pointer;
+            cursor: none;
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         #login-button:hover {
@@ -464,6 +465,22 @@
             width:0px;
             height:0px;
         }
+
+        /* Custom Cursor Style (A glowing ring) */
+        #custom-cursor {
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-color); /* Semi-transparent fill */
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none; /* Critical: allows clicks on elements underneath */
+            /* Initial transform: translate(-50%, -50%) centers the cursor element */
+            transform: translate(-50%, -50%); 
+            /* Transition on transform for high-performance smooth movement */
+            transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.4, 1);
+            z-index: 9999;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); /* Soft glow matching the accent color */
+        }
     </style>
 </head>
 <body>
@@ -533,6 +550,7 @@
 
         </div>
     </div>
+    <div id="custom-cursor"></div>
 
     <script>
         // --- IMPORTANT: CONFIGURE THESE VALUES ---
@@ -589,6 +607,19 @@
         const lyricsColumn = document.getElementById('lyrics-column');
         // const activeLineMarker = document.getElementById('active-line-marker'); // Reference removed
         const styleSelector = document.getElementById('lyric-style'); 
+
+        // --- Custom Cursor Logic (New Addition) ---
+        const customCursor = document.getElementById('custom-cursor'); 
+
+        // Attach event listener to the whole document
+        document.addEventListener('mousemove', (e) => {
+            // Use high-performance CSS transform to position the cursor.
+            // The CSS already handles the visual appearance (size, glow, and smooth transition).
+            // We combine the mouse coordinates (e.clientX, e.clientY) with the required 
+            // centering offset (-50%, -50%) that is needed to center the ring on the mouse pointer.
+            customCursor.style.left = `${e.clientX}px`;
+            customCursor.style.top = `${e.clientY}px`;
+        });
 
 
         // --- Utility Functions ---
