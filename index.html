@@ -138,23 +138,6 @@
             transition:.25s;
             position: relative; /* CRITICAL: For positioning the marker */
         }
-
-        /* New: Fixed horizontal line marker - Uses accent-shadow */
-        #active-line-marker {
-            position: absolute;
-            top: 50%; /* Center vertically */
-            left: 50%;
-            transform: translate(-50%, -50%); 
-            width: 100%; 
-            max-width: 80rem; 
-            height: 2px;
-            background: var(--accent-shadow); /* Dynamic Color */
-            z-index: 10; 
-            transition: opacity 0.5s ease;
-            pointer-events: none; 
-            opacity: 0; /* Default hidden, controlled by JS */
-        }
-
         
         .lyrics-box {
             width: 100vw;
@@ -191,13 +174,13 @@
         /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) 
            - Uses accent-shadow for text glow */
         .lyric-line.active {
-            color: #ffffff; /* Keep main text white for high contrast */
+            color: var(--accent-shadow); /* Keep main text white for high contrast */
             font-weight: 800;
             font-size: 3.5rem; 
             opacity: 1;
             transform: scale(1.05) translateY(0); 
             /* Dynamic Text Shadow/Glow using the average color */
-            text-shadow: 0 0 15px var(--accent-shadow), 0 0 5px rgba(255, 255, 255, 0.5); 
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.25), 0 0 5px rgba(255, 255, 255, 0.25); 
         }
         
         /* --- NEW: Explosion Pop Style --- */
@@ -478,8 +461,6 @@
         </div>
 
         <div id="lyrics-column" class="lyrics-column">
-            <div id="active-line-marker"></div> 
-            
             <div class="lyrics-box" id="lyrics-content">
                 </div>
 
@@ -538,7 +519,6 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
-        const activeLineMarker = document.getElementById('active-line-marker');
         const styleSelector = document.getElementById('lyric-style'); // NEW: Style selector reference
 
 
@@ -732,7 +712,6 @@
             currentStyle = styleSelector.value;
 
             if (lyrics && lyrics.length > 0) {
-                activeLineMarker.style.opacity = '1'; // Show the line marker
                 lyricsContent.innerHTML = '';
                 
                 // Add a dummy spacer element to help vertically center the active line
@@ -774,7 +753,6 @@
                 lyricsContent.style.overflowY = 'scroll';
                 
             } else {
-                activeLineMarker.style.opacity = '0'; // Hide the line marker
                 // Show "Not Available" message
                 lyricsContent.style.overflowY = 'hidden';
                 lyricsContent.style.justifyContent = 'center';
@@ -977,7 +955,6 @@
             lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">
                 Spotify connected. Checking for active playback...
             </p>`;
-            activeLineMarker.style.opacity = '0'; // Hide line marker initially
 
             pollingIndicator.classList.remove('hidden');
 
@@ -1066,8 +1043,6 @@
                     }
                     currentTrackId = null;
                     currentLyrics = null;
-                    
-                    activeLineMarker.style.opacity = '0'; // Hide line marker when no music
                     
                     if (data && !data.is_playing && data.item) {
                         const artistText = data.item.artists.map(a => a.name).join(', ');
