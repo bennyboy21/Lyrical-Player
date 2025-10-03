@@ -162,7 +162,7 @@
             font-weight: 500;
             padding: 0.75rem 0;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            opacity: 0; /* Slightly visible */
+            opacity: 0.8; /* Slightly visible */
             transform: scale(0.85) translateY(10px); 
             text-shadow: none;
             white-space: pre-wrap;
@@ -205,6 +205,24 @@
             font-size: 1.5rem; 
             opacity: 0.6; 
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* --- Fade Style --- */
+        
+        /* Specific styling for inactive lines in Fade Style */
+        .lyric-line.fade:not(.active) {
+            font-size: 2.25rem; /* The size we want for inactive lines */
+            opacity: 0.05; /* Make it almost invisible */
+            transition: all 0.5s ease-out; /* Smooth fade transition */
+            transform: scale(1) translateY(0); /* Remove scale/transform for this style */
+        }
+        
+        /* Specific styling for active lines in Fade Style */
+        .lyric-line.fade.active {
+            font-size: 3.5rem; /* Match the large active size */
+            opacity: 1; 
+            transform: scale(1) translateY(0); /* Keep it stable and centered */
+            transition: all 0.5s ease-in;
         }
 
 
@@ -337,8 +355,9 @@
                 z-index: 2;
             }
 
+            /* MODIFIED: Display on desktop and adjust position/width */
             #style-selection-section {
-                display: none;
+                display: flex; 
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
@@ -352,7 +371,7 @@
                 border-radius: 0.75rem;
                 position:fixed;
                 bottom:25px;
-                left:0px;
+                left:25px; /* Adjusted from 'left:0px' */
                 z-index: 2;
             }
 
@@ -379,6 +398,15 @@
             .lyric-line.explosion-pop:not(.active) {
                 font-size: 2rem; /* Keep inactive lines smaller for this style on desktop too */
             }
+            
+            /* Desktop Adjustments for Fade */
+            .lyric-line.fade:not(.active) {
+                font-size: 2rem; 
+            }
+            .lyric-line.fade.active {
+                font-size: 2.5rem; /* Slightly smaller active line for a more subtle effect */
+                scale: 1.0;
+            }
         }
         
         /* Mobile Layout Adjustments (max-width: 1023px) */
@@ -403,6 +431,23 @@
             }
             .lyric-line {
                 font-size: 1.1rem;
+            }
+            
+            /* Make the style selector visible and centered on mobile */
+            #style-selection-section {
+                display: flex;
+                position: relative;
+                width: 100%;
+                left: 0;
+                bottom: 0;
+                background: none;
+                box-shadow: none;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            #style-selector-container {
+                margin: 0 auto;
+                width: 100%;
             }
         }
 
@@ -436,7 +481,6 @@
             <div id="status-message"></div>
             
             <div id="song-display" class="hidden text-left">
-                <!-- CRITICAL: Added crossOrigin="anonymous" to allow image data reading for color extraction -->
                 <img id="album-art" alt="Album Art" crossOrigin="anonymous"> 
                 <div id="song-Info-Text">
                     
@@ -462,19 +506,17 @@
             </p>
         </div>
 
-        <div id="style-selection-section" class="hidden">
-            <div id="style-selector-container" class="hidden" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
+        <div id="style-selection-section">
+            <div id="style-selector-container" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
                 <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
                 <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
                     <option value="centered-scroll">Centered Scroll (Default)</option>
                     <option value="explosion-pop">Explosion Pop</option>
-                    <option value="fade">Fade</option>
-                </select>
+                    <option value="fade">Fade</option> </select>
             </div>
         </div>
 
         <div id="lyrics-column" class="lyrics-column">
-            <!-- Active line marker element removed as requested -->
             <div class="lyrics-box" id="lyrics-content">
             </div>
 
@@ -753,7 +795,12 @@
                         const randomX = (Math.random() * 50) - 25;
                         // Apply the style to the transform to give the 'explosion' effect.
                         p.style.transform = `scale(0.85) translateY(10px) translateX(${randomX}%)`;
+                        
+                    // NEW: Add the 'fade' class for the new style
+                    } else if (currentStyle === 'fade') { 
+                        p.classList.add('fade');
                     }
+                    // 'centered-scroll' needs no extra class/transform on initial render
 
                     lyricsContent.appendChild(p);
                 });
@@ -811,10 +858,11 @@
                         oldLine.style.color = '#7d7d7d'; 
                     }
                     
-                    // NEW: If switching from active, and in explosion-pop mode, re-apply the random transform
+                    // MODIFIED: Only explosion-pop needs the transform re-applied after deactivation.
                     if (currentStyle === 'explosion-pop' && oldLine) {
                          // We don't re-calculate, we let the original transform stick
                     }
+                    // 'fade' and 'centered-scroll' rely only on CSS for inactive state.
                 }
 
                 // Activate the new line
@@ -825,7 +873,7 @@
                         
                         // CRITICAL: Reset the custom transform style for the active line 
                         // to ensure it snaps to the centered, active style defined in CSS,
-                        // overriding any random X-offset applied by Explosion Pop.
+                        // overriding any random X-offset applied by Explosion Pop or other residual transforms.
                         newLine.style.transform = '';
                         
                         // Scroll to center the newly active line
@@ -1099,6 +1147,9 @@
             
             const loginButton = document.getElementById('login-button');
             const loginButtonText = document.getElementById('login-button-text');
+
+            // Set the initial style state
+            currentStyle = styleSelector.value;
 
             if (code) {
                 // 1. User is being redirected back after Spotify login
