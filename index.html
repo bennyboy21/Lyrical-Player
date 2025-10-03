@@ -161,9 +161,8 @@
             font-size: 1.5rem; 
             font-weight: 500;
             padding: 0.75rem 0;
-            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            opacity: 0.8; /* Slightly visible */
-            transform: scale(0.85) translateY(10px); 
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: scale(1) translateY(10px); 
             text-shadow: none;
             white-space: pre-wrap;
             box-sizing: border-box; 
@@ -176,9 +175,8 @@
         /* Active Lyric Line Style (Album Art Mask + Glow) */
         .lyric-line.active {
             font-weight: 800;
-            font-size: 3.5rem; 
             opacity: 1;
-            transform: scale(1.05) translateY(0); 
+            transform: scale(1.25) translateY(0); /* Keep it stable and centered */
 
             /* 1. Apply Text-as-Image Effect */
             color: white; /* Makes the text transparent */
@@ -210,16 +208,14 @@
         /* Specific styling for inactive lines in Fade Style */
         .lyric-line.fade:not(.active) {
             font-size: 2.25rem; /* The size we want for inactive lines */
-            opacity: 0.05; /* Make it almost invisible */
             transition: all 0.5s ease-out; /* Smooth fade transition */
             transform: scale(1) translateY(0); /* Remove scale/transform for this style */
         }
         
         /* Specific styling for active lines in Fade Style */
         .lyric-line.fade.active {
-            font-size: 3.5rem; /* Match the large active size */
             opacity: 1; 
-            transform: scale(1) translateY(0); /* Keep it stable and centered */
+            transform: scale(1.25) translateY(0); /* Keep it stable and centered */
             transition: all 0.5s ease-in;
         }
 
