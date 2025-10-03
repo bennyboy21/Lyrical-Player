@@ -180,7 +180,7 @@
         .lyric-line.active {
             font-weight: 800;
             opacity: 1;
-            transform: scale(1.25) translateY(0); /* Keep it stable and centered */
+            /* transform: scale(1.25) translateY(0);  -- REMOVED. Active transforms are style-specific */
 
             /* 1. Apply Text-as-Image Effect */
             color: white; /* Makes the text transparent */
@@ -209,7 +209,7 @@
 
         .lyric-line.explosion-pop.active {
             opacity:1;
-            /* transform: scale(1.25); */
+            transform: scale(1.25) translateY(0) translateX(0) !important; /* Force reset X and apply base scale */
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
@@ -237,22 +237,22 @@
             transition: 0.25s;
         }
         
-        /* --- 3D SCATTER Style (NEW) --- */
+        /* --- 3D SCATTER Style (UPDATED) --- */
         
         /* Specific styling for inactive lines in 3D Scatter */
         .lyric-line.three-d-scatter:not(.active) {
             font-size: 20px; /* Slightly smaller base font */
             opacity: 0.15;
             transition: all 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            /* Transform set by JS for random Z and rotation */
+            /* Transform set by JS for random Z, Scale, and rotation */
         }
 
-        /* Specific styling for active lines in 3D Scatter - Snap to center/flat */
+        /* Specific styling for active lines in 3D Scatter - Only apply scale and rotation to center on-plane */
         .lyric-line.three-d-scatter.active {
             opacity: 1;
-            font-size: 40px; /* Make the active line "pop" more */
-            /* Transform snaps it back to a centered, scaled-up, non-3D state */
-            transform: scale(1.2) translateZ(0px) rotateX(0deg) rotateY(0deg) translateY(0); 
+            font-size: 40px; 
+            /* KEY CHANGE: Removed translateZ(0px). The random Z is kept, but scale/rotation snaps to "active" */
+            transform: scale(1.2) rotateX(0deg) rotateY(0deg); 
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
@@ -623,7 +623,7 @@
                 const stepY = Math.floor(height / gridSize);
                 
                 for (let x = 0; x < width; x += stepX) {
-                    for (let y = 0; y < height; y += stepY) {
+                    for (let y = 0; y += stepY) {
                         // The getImageData call will fail if CORS isn't properly configured on the image server
                         const pixelData = context.getImageData(x, y, 1, 1).data;
                         r += pixelData[0];
@@ -811,7 +811,7 @@
                     } else if (currentStyle === 'fade') { 
                         p.classList.add('fade');
                     
-                    // NEW: Logic for 'three-d-scatter'
+                    // Logic for 'three-d-scatter'
                     } else if (currentStyle === 'three-d-scatter') {
                         p.classList.add('three-d-scatter');
                         
@@ -824,6 +824,7 @@
                         const randomRotateX = (Math.random() * 20) - 10; // -10deg to 10deg
                         const randomRotateY = (Math.random() * 20) - 10; // -10deg to 10deg
                         
+                        // The transform is set here permanently and is not reset on activation.
                         p.style.transform = `scale(${randomScale}) translateZ(${randomZ}px) rotateX(${randomRotateX}deg) rotateY(${randomRotateY}deg)`;
                     }
                     // 'centered-scroll' needs no extra class/transform on initial render
@@ -884,11 +885,11 @@
                         oldLine.style.color = '#7d7d7d'; 
                     }
                     
-                    // MODIFIED: Only explosion-pop needs the transform re-applied after deactivation.
+                    // MODIFIED: explosion-pop and fade rely on CSS for the inactive state
                     if (currentStyle === 'explosion-pop' && oldLine) {
-                         // We don't re-calculate, we let the original transform stick
+                         // The original transform remains on the element from 'renderLyrics'.
                     }
-                    // 'fade' and 'centered-scroll' and 'three-d-scatter' rely only on CSS for inactive state.
+                    // 'fade', 'centered-scroll' and 'three-d-scatter' rely only on CSS for inactive state.
                 }
 
                 // Activate the new line
@@ -897,10 +898,14 @@
                     if (newLine) {
                         newLine.classList.add('active');
                         
-                        // CRITICAL: Reset the custom transform style for the active line 
-                        // to ensure it snaps to the centered, active style defined in CSS,
-                        // overriding any random X/Z-offset applied by Explosion Pop or other residual transforms.
-                        newLine.style.transform = '';
+                        // CRITICAL: Reset the custom transform style ONLY for 'explosion-pop' 
+                        // because 'three-d-scatter' needs its random Z transform to persist.
+                        if (currentStyle === 'explosion-pop') {
+                             // Reset the inline transform to allow the CSS active rule to take over (which has a hardcoded transform)
+                             newLine.style.transform = ''; 
+                        } 
+                        // NOTE: For 'three-d-scatter', we do NOT clear the inline transform. The CSS active rule will simply
+                        // OVERRIDE the random scale/rotation but allow the random translateZ() to persist.
                         
                         // Scroll to center the newly active line
                         const targetElement = lyricsContent.children[newIndex + 1];
