@@ -186,8 +186,10 @@
 
             /* 2. Set the Album Art as the Background */
             background-image: var(--album-art-url); 
-            background-size: cover; /* Ensures the image covers the text area */
+            background-size: 100vw; /* Ensures the image covers the text area */
             background-position: center center; /* Centers the image */
+            
+            filter: brightness(100%);
 
             /* 3. Apply Subtle Glow using the Average Color */
             text-shadow: 
