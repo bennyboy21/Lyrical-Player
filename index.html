@@ -237,7 +237,7 @@
             transition: 0.25s;
         }
         
-        /* --- 3D SCATTER Style (UPDATED) --- */
+        /* --- 3D SCATTER Style (Permanent Z) --- */
         
         /* Specific styling for inactive lines in 3D Scatter */
         .lyric-line.three-d-scatter:not(.active) {
@@ -251,7 +251,7 @@
         .lyric-line.three-d-scatter.active {
             opacity: 1;
             font-size: 40px; 
-            /* KEY CHANGE: Removed translateZ(0px). The random Z is kept, but scale/rotation snaps to "active" */
+            /* The random translateZ() from JS will persist */
             transform: scale(1.2) rotateX(0deg) rotateY(0deg); 
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
@@ -623,7 +623,8 @@
                 const stepY = Math.floor(height / gridSize);
                 
                 for (let x = 0; x < width; x += stepX) {
-                    for (let y = 0; y += stepY) {
+                    // FIX: Corrected the loop structure to include the condition '< height'
+                    for (let y = 0; y < height; y += stepY) { 
                         // The getImageData call will fail if CORS isn't properly configured on the image server
                         const pixelData = context.getImageData(x, y, 1, 1).data;
                         r += pixelData[0];
@@ -885,11 +886,7 @@
                         oldLine.style.color = '#7d7d7d'; 
                     }
                     
-                    // MODIFIED: explosion-pop and fade rely on CSS for the inactive state
-                    if (currentStyle === 'explosion-pop' && oldLine) {
-                         // The original transform remains on the element from 'renderLyrics'.
-                    }
-                    // 'fade', 'centered-scroll' and 'three-d-scatter' rely only on CSS for inactive state.
+                    // explosion-pop and fade rely on CSS for the inactive state
                 }
 
                 // Activate the new line
