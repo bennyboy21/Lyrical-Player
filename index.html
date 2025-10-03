@@ -12,6 +12,15 @@
             margin: 0;
             padding: 0;
         }
+
+        /* NEW: Define CSS Variables for dynamic coloring */
+        :root {
+            --accent-color: #1DB954; /* Default Spotify Green (RGB 29, 185, 84) */
+            --accent-shadow: rgba(29, 185, 84, 0.8);
+            --lyric-background-start: #121212;
+            --lyric-background-end: #1e1e1e;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             user-select: none;
@@ -24,13 +33,14 @@
             overflow: hidden; /* Prevent body scroll for app-like feel */
         }
         
-        /* Spotify Aesthetics */
+        /* Spotify Aesthetics - Now using CSS Variable */
         .spotify-green {
-            background-color: #1DB954;
+            background-color: var(--accent-color);
             transition: background-color 0.15s ease, transform 0.2s ease;
         }
         .spotify-green:hover {
-            background-color: #1ed760;
+            /* This hover color should ideally be a slightly lighter version of the accent color, but we'll stick to fixed for simplicity */
+            background-color: #1ed760; 
             transform: scale(1.02);
         }
         
@@ -129,7 +139,7 @@
             position: relative; /* CRITICAL: For positioning the marker */
         }
 
-        /* New: Fixed horizontal line marker */
+        /* New: Fixed horizontal line marker - Uses accent-shadow */
         #active-line-marker {
             position: absolute;
             top: 50%; /* Center vertically */
@@ -138,8 +148,7 @@
             width: 100%; 
             max-width: 80rem; 
             height: 2px;
-            /* background: rgba(29, 185, 84, 0.7);  */
-            /* Translucent Spotify green */
+            background: var(--accent-shadow); /* Dynamic Color */
             z-index: 10; 
             transition: opacity 0.5s ease;
             pointer-events: none; 
@@ -168,7 +177,6 @@
             font-size: 1.5rem; 
             font-weight: 500;
             padding: 0.75rem 0;
-            /* Added translateY(10px) for the 'pop up' effect when active */
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
             opacity: 0;
             transform: scale(0.85) translateY(10px); 
@@ -180,32 +188,27 @@
             max-width: 80rem; 
         }
 
-        /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) */
+        /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) 
+           - Uses accent-shadow for text glow */
         .lyric-line.active {
-            color: #ffffff;
+            color: #ffffff; /* Keep main text white for high contrast */
             font-weight: 800;
             font-size: 3.5rem; 
             opacity: 1;
-            /* Reset vertical translate to 0 for the pop-up, horizontal translate reset by JS */
             transform: scale(1.05) translateY(0); 
-            /* text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5); */
+            /* Dynamic Text Shadow/Glow using the average color */
+            text-shadow: 0 0 15px var(--accent-shadow), 0 0 5px rgba(255, 255, 255, 0.5); 
         }
         
         /* --- NEW: Explosion Pop Style --- */
         
-        /* The base .lyric-line handles the initial state (scale/translate) */
-
         /* Specific styling for inactive lines in Explosion Pop */
         .lyric-line.explosion-pop:not(.active) {
-            /* New: Inactive lines are slightly smaller and have random X-offsets applied by JS */
             font-size: 1.5rem; 
             opacity: 0.6; 
-            /* Important: Ensures the random X-translate is smoothly animated */
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
         }
 
-        /* Explosion Pop Active line inherits .lyric-line.active, but the JS ensures 
-           its specific transform (with random X) is cleared for centering. */
 
         /* Media Column Styles */
         #status-message {
@@ -244,36 +247,34 @@
 
         #song-Info-Text {
             width:350px;
-            /* background:red; */
         }
 
         #song-title {
             font-size: 1.5rem;
             font-weight: 800;
             color: #ffffff;
-            white-space: nowrap; /* Prevents text from wrapping to the next line */
-            overflow: hidden;    /* Hides any content that overflows the element's box */
-            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
-  
+            white-space: nowrap; 
+            overflow: hidden;    
+            text-overflow: ellipsis;
         }
 
         #artist-name {
             font-size: 1rem;
             color: #d1d5db;
-            white-space: nowrap; /* Prevents text from wrapping to the next line */
-            overflow: hidden;    /* Hides any content that overflows the element's box */
-            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+            white-space: nowrap; 
+            overflow: hidden;    
+            text-overflow: ellipsis; 
         }
 
         #album-name {
             font-size: 1rem;
             color: #6b7280;
-            white-space: nowrap; /* Prevents text from wrapping to the next line */
-            overflow: hidden;    /* Hides any content that overflows the element's box */
-            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+            white-space: nowrap; 
+            overflow: hidden;    
+            text-overflow: ellipsis; 
         }
 
-        /* Progress Bar */
+        /* Progress Bar - Uses accent-color */
         #progress-bar-container {
             height: 0.5rem;
             background-color: #1f2937; 
@@ -309,7 +310,7 @@
             margin-right: 0.5rem;
             vertical-align: middle;
             display: inline-block;
-            color: #1DB954;
+            color: var(--accent-color); /* Dynamic Color */
         }
 
 
@@ -351,9 +352,9 @@
                 box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
                 width: 200px; 
                 border-radius: 0.75rem;
-                position:absolute;
-                top:25px;
-                right:25px;
+                position:fixed;
+                bottom:25px;
+                left:0px;
                 z-index: 2;
             }
 
@@ -439,7 +440,8 @@
             
             <div id="song-display" class="hidden text-left">
             <!-- <div id="song-display" class="text-left"> -->
-                <img id="album-art" alt="Album Art">
+                <!-- CRITICAL: Added crossOrigin="anonymous" to allow image data reading for color extraction -->
+                <img id="album-art" alt="Album Art" crossOrigin="anonymous"> 
                 <div id="song-Info-Text">
                     
                     <p>Now Playing</p>
@@ -459,7 +461,7 @@
             </div>
 
             <p id="polling-indicator" class="hidden">
-                <svg class="pulse-icon" style="width:1rem; height:1rem; margin-right: 0.5rem; vertical-align: middle; display: inline-block; color: #1DB954;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                <svg class="pulse-icon" style="width:1rem; height:1rem; margin-right: 0.5rem; vertical-align: middle; display: inline-block; color: var(--accent-color);" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 Checking for playback status...
             </p>
         </div>
@@ -541,6 +543,68 @@
 
 
         // --- Utility Functions ---
+        
+        /**
+         * Extracts the average RGB color from an image element using Canvas.
+         * Samples a grid of pixels to get a robust average.
+         * Returns an array [R, G, B]. Returns default [29, 185, 84] on failure.
+         * NOTE: Requires the image element to have crossOrigin="anonymous".
+         */
+        function getAverageColor(imgElement) {
+            let r = 0, g = 0, b = 0, count = 0;
+            const defaultColor = [29, 185, 84]; // Default to Spotify green
+
+            try {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                const width = imgElement.naturalWidth || 95; // Use 95px as fallback from CSS
+                const height = imgElement.naturalHeight || 95;
+                
+                if (width === 0 || height === 0) {
+                    return defaultColor;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(imgElement, 0, 0, width, height);
+
+                // Sample a grid of pixels (e.g., 10x10 grid)
+                const gridSize = 10;
+                const stepX = Math.floor(width / gridSize);
+                const stepY = Math.floor(height / gridSize);
+                
+                for (let x = 0; x < width; x += stepX) {
+                    for (let y = 0; y < height; y += stepY) {
+                        // The getImageData call will fail if CORS isn't properly configured on the image server
+                        const pixelData = context.getImageData(x, y, 1, 1).data;
+                        r += pixelData[0];
+                        g += pixelData[1];
+                        b += pixelData[2];
+                        count++;
+                    }
+                }
+
+                if (count === 0) return defaultColor;
+                
+                r = Math.floor(r / count);
+                g = Math.floor(g / count);
+                b = Math.floor(b / count);
+                
+                // Simple adjustment for very dark colors to ensure visibility as an accent
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                if (brightness < 50) { 
+                    r = Math.min(255, r + 50);
+                    g = Math.min(255, g + 50);
+                    b = Math.min(255, b + 50);
+                }
+
+                return [r, g, b];
+                
+            } catch (e) {
+                console.warn("Could not extract color (likely CORS failure). Using default Spotify green.", e);
+                return defaultColor;
+            }
+        }
 
         /** Generates a cryptographically secure random string. */
         function generateRandomString(length) {
@@ -938,8 +1002,35 @@
                         songTitle.textContent = track.name;
                         artistName.textContent = artistText;
                         albumName.textContent = track.album.name;
-                        albumArt.src = track.album.images[0]?.url || 'https://placehold.co/800x800/1DB954/ffffff?text=No+Art';
+
+                        // --- NEW COLOR EXTRACTION LOGIC ---
+                        albumArt.onload = function() {
+                            const [r, g, b] = getAverageColor(albumArt);
+                            const colorRGB = `rgb(${r}, ${g}, ${b})`;
+                            // Use a slightly transparent version for the shadow/glow effect
+                            const colorRGBA = `rgba(${r}, ${g}, ${b}, 0.8)`; 
+
+                            // Set CSS variables on the root element
+                            document.documentElement.style.setProperty('--accent-color', colorRGB);
+                            document.documentElement.style.setProperty('--accent-shadow', colorRGBA);
+                            
+                            // Log the color for debugging
+                            console.log(`Extracted Accent Color: ${colorRGB}`);
+                        };
                         
+                        const newArtUrl = track.album.images[0]?.url || 'https://placehold.co/800x800/1DB954/ffffff?text=No+Art';
+                        
+                        // Only update src if it's new to prevent unnecessary reloads
+                        if (albumArt.src !== newArtUrl) {
+                            albumArt.src = newArtUrl;
+                        }
+
+                        // If the image is already cached and ready, manually trigger onload
+                        if (albumArt.complete) {
+                            albumArt.onload(); 
+                        }
+                        // --- END NEW COLOR EXTRACTION LOGIC ---
+
                         // Start smooth update
                         currentTrackId = track.id;
                         initialProgressMs = data.progress_ms;
