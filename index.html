@@ -359,15 +359,18 @@
                 padding-left: 5%;
                 padding-right: 5%;
                 height: 100vh;
+                overflow-y: hidden;
             }
 
             /* Make the active lyric even larger for desktop */
             .lyric-line.active {
-                font-size: 3.5rem; 
+                font-size: 2rem; 
+                scale:1.1;
             }
             .lyric-line {
                 font-size: 2rem; 
             }
+
             .lyric-line.explosion-pop:not(.active) {
                 font-size: 2rem; /* Keep inactive lines smaller for this style on desktop too */
             }
@@ -852,7 +855,7 @@
                     if (response.status === 403) {
                          statusMessage.textContent = `403 FORBIDDEN: Your Spotify account is not whitelisted for this app.`;
                          songDisplay.classList.add('hidden');
-                         styleSelectionSection.classList.add('hidden');
+                        //  styleSelectionSection.classList.add('hidden');
                          throw new Error(`API Error 403 Forbidden.`);
                     }
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -944,7 +947,7 @@
                         
                         statusMessage.textContent = ''; // Clear status message
                         songDisplay.classList.remove('hidden');
-                         styleSelectionSection.classList.remove('hidden');
+                        // styleSelectionSection.classList.remove('hidden');
                         pollingIndicator.classList.add('hidden');
                         
                     } else {
@@ -977,7 +980,7 @@
                     }
                     
                     songDisplay.classList.add('hidden');
-                    styleSelectionSection.classList.add('hidden');
+                    // styleSelectionSection.classList.add('hidden');
                     pollingIndicator.classList.remove('hidden');
                     
                     // Reset lyric view
