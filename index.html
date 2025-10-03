@@ -181,16 +181,16 @@
             transform: scale(1.05) translateY(0); 
 
             /* 1. Apply Text-as-Image Effect */
-            color: transparent; /* Makes the text transparent */
+            color: white; /* Makes the text transparent */
             -webkit-background-clip: text; /* Clips the background to the text shape (for Chrome/Safari) */
             background-clip: text; /* Standard CSS */
 
             /* 2. Set the Album Art as the Background */
-            background-image: var(--album-art-url); 
-            background-size: 100vw 100vh; /* Ensures the image covers the text area */
-            background-position: center center; /* Centers the image */
+            /* background-image: var(--album-art-url); 
+            background-size: 100vw 100vh;
+            background-position: center center;
             background-position-x: 0px;
-            background-position-y: 0px;
+            background-position-y: 0px; */
             
             filter: brightness(100%);
             transition: 0.25s;
