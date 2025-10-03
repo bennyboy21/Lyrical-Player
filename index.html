@@ -120,10 +120,12 @@
             left:0px;
         }
 
+        /* ADDED: Perspective for 3D transforms to work */
         #lyrics-column {
             height: 100vh;
             width:100vw;
             overflow:hidden;
+            perspective: 800px; 
         }
         
         .lyrics-column {
@@ -139,7 +141,7 @@
             position: relative; 
         }
 
-        
+        /* ADDED: Preserve 3D space for child elements */
         .lyrics-box {
             width: 100vw;
             height: 100vh;
@@ -152,6 +154,7 @@
             top:50%;
             left:50%;
             transform:translate(-50%, -50%);
+            transform-style: preserve-3d; 
         }
 
         /* Base Lyric Line Style (Centered Scroll Default) */
@@ -232,6 +235,25 @@
             text-align: center;
             transform: scale(1) translate(-50%, -50%); /* Keep it stable and centered */
             transition: 0.25s;
+        }
+        
+        /* --- 3D SCATTER Style (NEW) --- */
+        
+        /* Specific styling for inactive lines in 3D Scatter */
+        .lyric-line.three-d-scatter:not(.active) {
+            font-size: 20px; /* Slightly smaller base font */
+            opacity: 0.15;
+            transition: all 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            /* Transform set by JS for random Z and rotation */
+        }
+
+        /* Specific styling for active lines in 3D Scatter - Snap to center/flat */
+        .lyric-line.three-d-scatter.active {
+            opacity: 1;
+            font-size: 40px; /* Make the active line "pop" more */
+            /* Transform snaps it back to a centered, scaled-up, non-3D state */
+            transform: scale(1.2) translateZ(0px) rotateX(0deg) rotateY(0deg) translateY(0); 
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
 
@@ -499,7 +521,9 @@
                 <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
                     <option value="centered-scroll">Centered Scroll (Default)</option>
                     <option value="explosion-pop">Explosion Pop</option>
-                    <option value="fade">Fade</option> </select>
+                    <option value="fade">Fade</option>
+                    <option value="three-d-scatter">3D Scatter</option>
+                </select>
             </div>
         </div>
 
@@ -786,6 +810,21 @@
                     // NEW: Add the 'fade' class for the new style
                     } else if (currentStyle === 'fade') { 
                         p.classList.add('fade');
+                    
+                    // NEW: Logic for 'three-d-scatter'
+                    } else if (currentStyle === 'three-d-scatter') {
+                        p.classList.add('three-d-scatter');
+                        
+                        // 2. Apply Random 3D Transform
+                        // Random Z (depth) between -300px (closer) and 300px (farther)
+                        const randomZ = (Math.random() * 600) - 300; 
+                        // Random Scale (makes the Z-effect look more dramatic)
+                        const randomScale = 0.7 + (Math.random() * 0.3); // Scale between 0.7 and 1.0
+                        // Random Rotation (for extra scatter effect)
+                        const randomRotateX = (Math.random() * 20) - 10; // -10deg to 10deg
+                        const randomRotateY = (Math.random() * 20) - 10; // -10deg to 10deg
+                        
+                        p.style.transform = `scale(${randomScale}) translateZ(${randomZ}px) rotateX(${randomRotateX}deg) rotateY(${randomRotateY}deg)`;
                     }
                     // 'centered-scroll' needs no extra class/transform on initial render
 
@@ -849,7 +888,7 @@
                     if (currentStyle === 'explosion-pop' && oldLine) {
                          // We don't re-calculate, we let the original transform stick
                     }
-                    // 'fade' and 'centered-scroll' rely only on CSS for inactive state.
+                    // 'fade' and 'centered-scroll' and 'three-d-scatter' rely only on CSS for inactive state.
                 }
 
                 // Activate the new line
@@ -860,7 +899,7 @@
                         
                         // CRITICAL: Reset the custom transform style for the active line 
                         // to ensure it snaps to the centered, active style defined in CSS,
-                        // overriding any random X-offset applied by Explosion Pop or other residual transforms.
+                        // overriding any random X/Z-offset applied by Explosion Pop or other residual transforms.
                         newLine.style.transform = '';
                         
                         // Scroll to center the newly active line
