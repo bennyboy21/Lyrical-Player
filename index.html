@@ -13,10 +13,11 @@
             padding: 0;
         }
 
-        /* NEW: Define CSS Variables for dynamic coloring */
+        /* NEW: Define CSS Variables for dynamic coloring and image mask */
         :root {
             --accent-color: #1DB954; /* Default Spotify Green (RGB 29, 185, 84) */
             --accent-shadow: rgba(29, 185, 84, 0.8);
+            --album-art-url: url('https://placehold.co/800x800/1DB954/ffffff?text=Lyrify'); /* Default placeholder */
             --lyric-background-start: #121212;
             --lyric-background-end: #1e1e1e;
         }
@@ -114,7 +115,6 @@
             width: 100%;
             height: 100vh;
             max-width: none;
-            background-color: transparent;
             position:absolute;
             top:0px;
             left:0px;
@@ -136,8 +136,9 @@
             text-align: center;
             overflow: hidden; 
             transition:.25s;
-            position: relative; /* CRITICAL: For positioning the marker */
+            position: relative; 
         }
+
         
         .lyrics-box {
             width: 100vw;
@@ -161,7 +162,7 @@
             font-weight: 500;
             padding: 0.75rem 0;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            opacity: 0;
+            opacity: 0.8; /* Slightly visible */
             transform: scale(0.85) translateY(10px); 
             text-shadow: none;
             white-space: pre-wrap;
@@ -171,19 +172,30 @@
             max-width: 80rem; 
         }
 
-        /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) 
-           - Uses accent-shadow for text glow */
+        /* Active Lyric Line Style (Album Art Mask + Glow) */
         .lyric-line.active {
-            color: var(--accent-shadow); /* Keep main text white for high contrast */
             font-weight: 800;
             font-size: 3.5rem; 
             opacity: 1;
             transform: scale(1.05) translateY(0); 
-            /* Dynamic Text Shadow/Glow using the average color */
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.25), 0 0 5px rgba(255, 255, 255, 0.25); 
+
+            /* 1. Apply Text-as-Image Effect */
+            color: transparent; /* Makes the text transparent */
+            -webkit-background-clip: text; /* Clips the background to the text shape (for Chrome/Safari) */
+            background-clip: text; /* Standard CSS */
+
+            /* 2. Set the Album Art as the Background */
+            background-image: var(--album-art-url); 
+            background-size: cover; /* Ensures the image covers the text area */
+            background-position: center center; /* Centers the image */
+
+            /* 3. Apply Subtle Glow using the Average Color */
+            text-shadow: 
+                0 0 10px var(--accent-shadow), /* Soft color glow */
+                0 0 5px rgba(255, 255, 255, 0.5); /* White highlight */
         }
         
-        /* --- NEW: Explosion Pop Style --- */
+        /* --- Explosion Pop Style --- */
         
         /* Specific styling for inactive lines in Explosion Pop */
         .lyric-line.explosion-pop:not(.active) {
@@ -322,7 +334,7 @@
                 z-index: 2;
             }
 
-            #style-Selection-Section {
+            #style-selection-section {
                 display: none;
                 flex-direction: column;
                 justify-content: center;
@@ -416,13 +428,11 @@
     </div>
 
     <div id="status-section" class="hidden">
-    <!-- <div id="status-section" class=""> -->
         
         <div id="media-column" class="media-column">
             <div id="status-message"></div>
             
             <div id="song-display" class="hidden text-left">
-            <!-- <div id="song-display" class="text-left"> -->
                 <!-- CRITICAL: Added crossOrigin="anonymous" to allow image data reading for color extraction -->
                 <img id="album-art" alt="Album Art" crossOrigin="anonymous"> 
                 <div id="song-Info-Text">
@@ -455,16 +465,17 @@
                 <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
                     <option value="centered-scroll">Centered Scroll (Default)</option>
                     <option value="explosion-pop">Explosion Pop</option>
-                    <option value="explosion-pop">Fade</option>
+                    <option value="fade">Fade</option>
                 </select>
             </div>
         </div>
 
         <div id="lyrics-column" class="lyrics-column">
+            <!-- Active line marker element removed as requested -->
             <div class="lyrics-box" id="lyrics-content">
-                </div>
-
             </div>
+
+        </div>
     </div>
 
     <script>
@@ -497,7 +508,8 @@
         const originalLoginMessage = `The ultimate synchronized lyric experience for Spotify.<br>See what you hear, in real-time.`;
         const originalButtonText = `Connect with Spotify`;
 
-        // --------------------------------------------------
+        // --- Global Art URL to set the CSS Variable ---
+        let currentAlbumArtUrl = 'https://placehold.co/800x800/1DB954/ffffff?text=Lyrify';
 
         // --- UI Element References ---
         const loginSection = document.getElementById('login-section');
@@ -519,7 +531,8 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
-        const styleSelector = document.getElementById('lyric-style'); // NEW: Style selector reference
+        // const activeLineMarker = document.getElementById('active-line-marker'); // Reference removed
+        const styleSelector = document.getElementById('lyric-style'); 
 
 
         // --- Utility Functions ---
@@ -570,7 +583,7 @@
                 g = Math.floor(g / count);
                 b = Math.floor(b / count);
                 
-                // Simple adjustment for very dark colors to ensure visibility as an accent
+                // Simple adjustment for very dark colors to ensure visibility as an accent 
                 const brightness = (r * 299 + g * 587 + b * 114) / 1000;
                 if (brightness < 50) { 
                     r = Math.min(255, r + 50);
@@ -712,6 +725,7 @@
             currentStyle = styleSelector.value;
 
             if (lyrics && lyrics.length > 0) {
+                // activeLineMarker.style.opacity = '1'; // Removed marker visibility control
                 lyricsContent.innerHTML = '';
                 
                 // Add a dummy spacer element to help vertically center the active line
@@ -753,6 +767,7 @@
                 lyricsContent.style.overflowY = 'scroll';
                 
             } else {
+                // activeLineMarker.style.opacity = '0'; // Removed marker visibility control
                 // Show "Not Available" message
                 lyricsContent.style.overflowY = 'hidden';
                 lyricsContent.style.justifyContent = 'center';
@@ -787,7 +802,11 @@
                 // Deactivate the old line
                 if (activeLyricIndex !== -1) {
                     const oldLine = document.getElementById(`lyric-line-${activeLyricIndex}`);
-                    if (oldLine) oldLine.classList.remove('active');
+                    if (oldLine) {
+                        oldLine.classList.remove('active');
+                        // Restore color for deactivated line to make text mask disappear
+                        oldLine.style.color = '#7d7d7d'; 
+                    }
                     
                     // NEW: If switching from active, and in explosion-pop mode, re-apply the random transform
                     if (currentStyle === 'explosion-pop' && oldLine) {
@@ -903,7 +922,6 @@
                     if (response.status === 403) {
                          statusMessage.textContent = `403 FORBIDDEN: Your Spotify account is not whitelisted for this app.`;
                          songDisplay.classList.add('hidden');
-                        //  styleSelectionSection.classList.add('hidden');
                          throw new Error(`API Error 403 Forbidden.`);
                     }
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -945,7 +963,7 @@
         }
 
 
-        /** Main logic to poll for the currently playing song every 3 seconds. */
+        /** Main logic to poll for the currently playing song every 1 seconds. */
         function pollForSong() {
             loginSection.classList.add('hidden');
             statusSection.classList.remove('hidden');
@@ -955,6 +973,7 @@
             lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">
                 Spotify connected. Checking for active playback...
             </p>`;
+            // activeLineMarker.style.opacity = '0'; // Removed marker visibility control
 
             pollingIndicator.classList.remove('hidden');
 
@@ -964,12 +983,17 @@
                 if (data && data.is_playing) {
                     const track = data.item;
                     const artistText = track.artists.map(a => a.name).join(', ');
+                    const newArtUrl = track.album.images[0]?.url || 'https://placehold.co/800x800/1DB954/ffffff?text=No+Art';
 
                     if (track.id !== currentTrackId) {
                         
                         console.log('New track detected or resumed.');
                         
                         if (progressUpdaterId) clearInterval(progressUpdaterId);
+                        
+                        // Update Album Art URL global variable and CSS variable for text mask
+                        currentAlbumArtUrl = newArtUrl;
+                        document.documentElement.style.setProperty('--album-art-url', `url('${currentAlbumArtUrl}')`);
 
                         // Fetch and render new lyrics
                         currentLyrics = await fetchSyncedLyrics(track.name, artistText);
@@ -995,8 +1019,6 @@
                             console.log(`Extracted Accent Color: ${colorRGB}`);
                         };
                         
-                        const newArtUrl = track.album.images[0]?.url || 'https://placehold.co/800x800/1DB954/ffffff?text=No+Art';
-                        
                         // Only update src if it's new to prevent unnecessary reloads
                         if (albumArt.src !== newArtUrl) {
                             albumArt.src = newArtUrl;
@@ -1021,7 +1043,6 @@
                         
                         statusMessage.textContent = ''; // Clear status message
                         songDisplay.classList.remove('hidden');
-                        // styleSelectionSection.classList.remove('hidden');
                         pollingIndicator.classList.add('hidden');
                         
                     } else {
@@ -1044,6 +1065,8 @@
                     currentTrackId = null;
                     currentLyrics = null;
                     
+                    // activeLineMarker.style.opacity = '0'; // Removed marker visibility control
+                    
                     if (data && !data.is_playing && data.item) {
                         const artistText = data.item.artists.map(a => a.name).join(', ');
                         statusMessage.textContent = `Music is paused: ${data.item.name} by ${artistText}`;
@@ -1052,7 +1075,6 @@
                     }
                     
                     songDisplay.classList.add('hidden');
-                    // styleSelectionSection.classList.add('hidden');
                     pollingIndicator.classList.remove('hidden');
                     
                     // Reset lyric view
