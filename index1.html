@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyrify - Sync Spotify Lyrics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* General Reset & Typography */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            background-color: #000000; /* Deep black background */
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* Prevent body scroll for app-like feel */
+        }
+        
+        /* Spotify Aesthetics */
+        .spotify-green {
+            background-color: #1DB954;
+            transition: background-color 0.15s ease, transform 0.2s ease;
+        }
+        .spotify-green:hover {
+            background-color: #1ed760;
+            transform: scale(1.02);
+        }
+        
+        /* Utility Classes for JS Transitions */
+        .hidden {
+            display: none !important;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-left {
+            text-align: left;
+        }
+        
+        /* Pulse Animation */
+        .pulse-icon {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.05); }
+        }
+
+        /* --- LANDING PAGE STYLES (Phase 1) --- */
+        #login-section {
+            border-radius: 0.75rem;
+            max-width: 420px; 
+            width: 90%; 
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+            padding: 3rem;
+            opacity: 1;
+            transition: opacity 0.5s ease-in;
+        }
+        #login-section h1 {
+            font-size: 3.75rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+        #login-message {
+            font-size: 1.25rem;
+            color: #9ca3af; 
+            margin-bottom: 2rem;
+        }
+        #login-button {
+            padding: 1rem 2.5rem;
+            border-radius: 9999px;
+            width: 100%;
+            max-width: 24rem; 
+            color: #000000;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #login-button:hover {
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.4), 0 8px 10px rgba(0, 0, 0, 0.1);
+        }
+        #login-button-text {
+            font-size: 1.5rem;
+        }
+        #login-section > p:last-child {
+            font-size: 0.75rem;
+            color: #6b7280; 
+            margin-top: 1.5rem;
+        }
+
+        /* --- POST-LOGIN LYRICS PAGE STYLES (Phase 2) --- */
+        #status-section {
+            width: 100%;
+            height: 100vh;
+            max-width: none;
+            background-color: transparent;
+            position:absolute;
+            top:0px;
+            left:0px;
+        }
+        
+        .lyrics-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            overflow: hidden; 
+            transition:.25s;
+            position: relative; /* CRITICAL: For positioning the marker */
+        }
+
+        /* New: Fixed horizontal line marker */
+        #active-line-marker {
+            position: absolute;
+            top: 50%; /* Center vertically */
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            width: 100%; 
+            max-width: 80rem; 
+            height: 2px;
+            /* background: rgba(29, 185, 84, 0.7);  */
+            /* Translucent Spotify green */
+            z-index: 10; 
+            transition: opacity 0.5s ease;
+            pointer-events: none; 
+            opacity: 0; /* Default hidden, controlled by JS */
+        }
+
+        
+        .lyrics-box {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            background-color: transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            position: absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%, -50%);
+        }
+
+        /* Base Lyric Line Style (Centered Scroll Default) */
+        .lyric-line {
+            line-height: 1.5;
+            color: #7d7d7d; /* Muted gray for non-active lines */
+            font-size: 1.5rem; 
+            font-weight: 500;
+            padding: 0.75rem 0;
+            /* Added translateY(10px) for the 'pop up' effect when active */
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            opacity: 0;
+            transform: scale(0.85) translateY(10px); 
+            text-shadow: none;
+            white-space: pre-wrap;
+            box-sizing: border-box; 
+            margin-left: auto; 
+            margin-right: auto;
+            max-width: 80rem; 
+        }
+
+        /* Active Lyric Line Style (Centered Scroll and Explosion Pop Active) */
+        .lyric-line.active {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 3.5rem; 
+            opacity: 1;
+            /* Reset vertical translate to 0 for the pop-up, horizontal translate reset by JS */
+            transform: scale(1.05) translateY(0); 
+            /* text-shadow: 0 0 15px rgba(29, 185, 84, 0.8), 0 0 5px rgba(255, 255, 255, 0.5); */
+            text-shadow: none;
+        }
+        
+        /* --- NEW: Explosion Pop Style --- */
+        
+        /* The base .lyric-line handles the initial state (scale/translate) */
+
+        /* Specific styling for inactive lines in Explosion Pop */
+        .lyric-line.explosion-pop:not(.active) {
+            /* New: Inactive lines are slightly smaller and have random X-offsets applied by JS */
+            font-size: 1.5rem; 
+            opacity: 0.6; 
+            /* Important: Ensures the random X-translate is smoothly animated */
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+
+        /* Explosion Pop Active line inherits .lyric-line.active, but the JS ensures 
+           its specific transform (with random X) is cleared for centering. */
+
+        /* Media Column Styles */
+        #status-message {
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            margin-bottom: 1rem; 
+            color: #ffffff;
+            width: 100%;
+        }
+
+        #song-display {
+            display:flex;
+            align-items:center;
+            gap: 10px;
+        }
+
+        #album-art {
+            width: 95px;
+            height: 95px;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0px 100px 50px rgba(0, 0, 0, 0.7);
+            transform: scale(1);
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+
+        #song-display > p:nth-of-type(1) { 
+            font-size: 0.875rem;
+            color: #9ca3af;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        #song-Info-Text {
+            width:350px;
+            /* background:red; */
+        }
+
+        #song-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+  
+        }
+
+        #artist-name {
+            font-size: 1rem;
+            color: #d1d5db;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+        }
+
+        #album-name {
+            font-size: 1rem;
+            color: #6b7280;
+            white-space: nowrap; /* Prevents text from wrapping to the next line */
+            overflow: hidden;    /* Hides any content that overflows the element's box */
+            text-overflow: ellipsis; /* Displays an ellipsis (...) to indicate truncated text */
+        }
+
+        /* Progress Bar */
+        #progress-bar-container {
+            height: 0.5rem;
+            background-color: #1f2937; 
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: -15px;
+        }
+
+        #progress-bar {
+            height: 100%;
+            transition: width 0.3s linear;
+        }
+        
+        #time-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-family: monospace;
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom:15px;
+        }
+        
+        /* Polling Indicator */
+        #polling-indicator {
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        #polling-indicator svg {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+            display: inline-block;
+            color: #1DB954;
+        }
+
+
+        /* Desktop/Large Screen Layout (min-width: 1024px) */
+        @media (min-width: 1024px) {
+            #status-section {
+                grid-template-columns: 35% 65%; 
+            }
+
+            .media-column {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 3rem;
+                height: calc(100vh - 50px);
+                max-height:160px;
+                background: rgba(60, 60, 60, 0.5); 
+                backdrop-filter: blur(.5rem);
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
+                width: 500px; 
+                border-radius: 0.75rem;
+                position:absolute;
+                bottom:25px;
+                right:25px;
+                z-index: 2;
+            }
+
+            #style-Selection-Section {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 3rem;
+                height: calc(100vh - 50px);
+                max-height:160px;
+                background: rgba(60, 60, 60, 0.5); 
+                backdrop-filter: blur(.5rem);
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
+                width: 200px; 
+                border-radius: 0.75rem;
+                position:absolute;
+                top:25px;
+                right:25px;
+                z-index: 2;
+            }
+
+            #song-display {
+                max-width: none; 
+            }
+
+            .lyrics-column {
+                padding-left: 5%;
+                padding-right: 5%;
+                height: 100vh;
+            }
+
+            /* Make the active lyric even larger for desktop */
+            .lyric-line.active {
+                font-size: 2rem; 
+                scale:1.25;
+                text-shadow: none;
+            }
+            .lyric-line {
+                font-size: 2rem; 
+            }
+            .lyric-line.explosion-pop:not(.active) {
+                font-size: 2rem; /* Keep inactive lines smaller for this style on desktop too */
+            }
+        }
+        
+        /* Mobile Layout Adjustments (max-width: 1023px) */
+        @media (max-width: 1023px) {
+            #status-section {
+                padding: 1rem;
+                overflow-y: auto; 
+                display: block; 
+            }
+            .lyrics-column, .media-column {
+                height: auto; 
+                padding: 1rem;
+                width: 100%;
+                background: none;
+                box-shadow: none;
+            }
+            .lyrics-box {
+                height: 50vh; 
+            }
+            .lyric-line.active {
+                font-size: 2.25rem;
+            }
+            .lyric-line {
+                font-size: 1.1rem;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width:0px;
+            height:0px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-section" class="text-center">
+        <h1>Lyrify</h1>
+        <p id="login-message">
+            The ultimate synchronized lyric experience for Spotify.
+            <br>See what you hear, in real-time.
+        </p>
+
+        <button id="login-button" class="spotify-green">
+            <span id="login-button-text">Connect with Spotify</span>
+        </button>
+
+        <p>
+            We only request permission to read your currently playing song.
+        </p>
+    </div>
+
+    <div id="status-section" class="hidden">
+    <!-- <div id="status-section" class=""> -->
+        
+        <div id="media-column" class="media-column">
+            <div id="status-message"></div>
+            
+            <div id="song-display" class="hidden text-left">
+            <!-- <div id="song-display" class="text-left"> -->
+                <img id="album-art" alt="Album Art">
+                <div id="song-Info-Text">
+                    
+                    <p>Now Playing</p>
+                    <h2 id="song-title"></h2>
+                    <p id="artist-name"></p>
+                    <p id="album-name" style="display:none"></p>
+                    <div style="margin-top: 1.5rem;">
+                        <div id="progress-bar-container">
+                            <div id="progress-bar" class="spotify-green"></div>
+                        </div>
+                        <p id="time-text">
+                            <span id="current-time">0:00</span>
+                            <span id="duration-time">0:00</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <p id="polling-indicator" class="hidden">
+                <svg class="pulse-icon" style="width:1rem; height:1rem; margin-right: 0.5rem; vertical-align: middle; display: inline-block; color: #1DB954;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                Checking for playback status...
+            </p>
+        </div>
+
+        <div id="style-selection-section" class="">
+            <div id="style-selector-container" class="" style="margin-top: 2rem; width: 100%; max-width: 20rem; text-align: left;">
+                <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
+                <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
+                    <option value="centered-scroll">Centered Scroll (Default)</option>
+                    <option value="explosion-pop">Explosion Pop</option>
+                    <option value="explosion-pop">Fade</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="lyrics-column" class="lyrics-column">
+            <div id="active-line-marker"></div> 
+            
+            <div class="lyrics-box" id="lyrics-content">
+                </div>
+
+            </div>
+    </div>
+
+    <script>
+        // --- IMPORTANT: CONFIGURE THESE VALUES ---
+        // NOTE: These placeholder values are crucial for the app to function after deployment.
+        const CLIENT_ID = '86d5980bc6284ccba0515e63ddd32845'; // Spotify Client ID
+        const REDIRECT_URI = 'https://bennyboy21.github.io/Lyrical-Player/'; // Redirect URI
+        const LRCLIB_API_BASE = 'https://lrclib.net/api/search'; 
+        // ------------------------------------------
+
+        const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';
+        const TOKEN_URL = 'https://accounts.spotify.com/api/token';
+        const NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing';
+        const SCOPE = 'user-read-currently-playing'; // Scope needed to read current song
+
+        let accessToken = null;
+        let pollingIntervalId = null;
+        
+        // --- State Variables ---
+        let progressUpdaterId = null; 
+        let currentTrackId = null;    
+        let progressStartTime = 0;    
+        let initialProgressMs = 0;    
+        let trackDurationMs = 0;      
+        let currentLyrics = null;     // Stores the lyrics object
+        let activeLyricIndex = -1;    // Index of the currently highlighted lyric line
+        let currentStyle = 'centered-scroll'; // Tracks the current style
+        
+        // Storing original login state for restoration on failure
+        const originalLoginMessage = `The ultimate synchronized lyric experience for Spotify.<br>See what you hear, in real-time.`;
+        const originalButtonText = `Connect with Spotify`;
+
+        // --------------------------------------------------
+
+        // --- UI Element References ---
+        const loginSection = document.getElementById('login-section');
+        const statusSection = document.getElementById('status-section');
+        const loginMessage = document.getElementById('login-message'); 
+        const loginButton = document.getElementById('login-button'); 
+        const loginButtonText = document.getElementById('login-button-text'); 
+        const mediaColumn = document.getElementById('media-column');
+        const styleSelectionSection = document.getElementById('style-selection-section');
+        const statusMessage = document.getElementById('status-message');
+        const songDisplay = document.getElementById('song-display');
+        const songTitle = document.getElementById('song-title');
+        const artistName = document.getElementById('artist-name');
+        const albumName = document.getElementById('album-name');
+        const albumArt = document.getElementById('album-art');
+        const progressBar = document.getElementById('progress-bar');
+        const pollingIndicator = document.getElementById('polling-indicator');
+        const currentTimeText = document.getElementById('current-time');
+        const durationTimeText = document.getElementById('duration-time');
+        const lyricsContent = document.getElementById('lyrics-content');
+        const lyricsColumn = document.getElementById('lyrics-column');
+        const activeLineMarker = document.getElementById('active-line-marker');
+        const styleSelector = document.getElementById('lyric-style'); // NEW: Style selector reference
+
+
+        // --- Utility Functions ---
+
+        /** Generates a cryptographically secure random string. */
+        function generateRandomString(length) {
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const randomValues = crypto.getRandomValues(new Uint8Array(length));
+            return randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
+        }
+
+        /** Base64-URL encodes a buffer. */
+        function base64urlencode(buffer) {
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+
+        /** Creates a SHA256 hash and converts it to a base64 URL-safe string. */
+        async function sha256(plain) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plain);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return base64urlencode(hash);
+        }
+        
+        /** Converts milliseconds to MM:SS format. */
+        function msToTime(ms) {
+            if (ms === null || isNaN(ms) || ms < 0) return '0:00';
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        /** * Cleans up track titles by removing common metadata in parentheses or brackets 
+         * and removing punctuation that might interfere with string matching. 
+         */
+        function cleanTrackTitle(title) {
+            // 1. Remove text in parentheses (e.g., (Live), (Remix))
+            let cleaned = title.replace(/\s*\(.*?\)\s*/g, ' ');
+            // 2. Remove text in brackets (e.g., [Explicit], [Official Video])
+            cleaned = cleaned.replace(/\s*\[.*?\]\s*/g, ' ');
+            // 3. Remove common features/mixes (e.g., "feat. Artist", " - Radio Edit")
+            cleaned = cleaned.replace(/\s(feat|ft)\..*/i, '').replace(/\s-\s(Radio|Album|Single|Original|Acoustic|Remastered|20\d{2})\s(Edit|Mix|Version).*/i, '').trim();
+            // 4. Clean up multiple spaces left over
+            return cleaned.replace(/\s+/g, ' ').trim();
+        }
+        
+        /** * Parses LRC content into a structured array of lyric lines with time in milliseconds. */
+        function parseLrc(lrcContent) {
+            const lines = [];
+            // Regex handles [mm:ss.xx] or [mm:ss.xxx]
+            const lrcRegex = /^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+
+            lrcContent.split('\n').forEach(line => {
+                const match = line.match(lrcRegex);
+                if (match) {
+                    const minutes = parseInt(match[1], 10);
+                    const seconds = parseInt(match[2], 10);
+                    // Milliseconds can be 2 or 3 digits. Normalize to 3.
+                    let ms = parseInt(match[3].padEnd(3, '0'), 10);
+                    const text = match[4].trim() || ' ';
+
+                    // Apply a slight look-ahead delay to make the lyric appear *before* the timecode
+                    const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms - 150; // 150ms lookahead
+                    
+                    if (timeMs >= 0) {
+                       lines.push({ time: timeMs, text: text });
+                    }
+                }
+            });
+            
+            lines.sort((a, b) => a.time - b.time);
+            
+            return lines;
+        }
+
+
+        // --- Lyrics Management (LRC Lib Integration) ---
+        
+        /** Fetches synchronized lyrics from LRC Lib using cleaned track name and artist. */
+        async function fetchSyncedLyrics(trackName, artistName) {
+            lyricsContent.innerHTML = '<p style="color:#9ca3af; font-style:italic; font-size:1.5rem; margin-top:1rem; text-align:center;">Fetching synchronized lyrics...</p>';
+            
+            const cleanedTrackName = cleanTrackTitle(trackName);
+            let results = null;
+            
+            // Query 1: Cleaned Track Name + Artist Name (Most accurate)
+            let url1 = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&artist_name=${encodeURIComponent(artistName)}&limit=1`;
+            
+            try {
+                const response1 = await fetch(url1);
+                if (response1.ok) {
+                    results = await response1.json();
+                    if (results && results.length > 0 && results[0].syncedLyrics) {
+                        return parseLrc(results[0].syncedLyrics);
+                    }
+                }
+                
+                // Fallback Query 2: Only Cleaned Track Name (Broader search)
+                let url2 = `${LRCLIB_API_BASE}?track_name=${encodeURIComponent(cleanedTrackName)}&limit=1`;
+                const response2 = await fetch(url2);
+
+                if (response2.ok) {
+                    results = await response2.json();
+                    if (results && results.length > 0 && results[0].syncedLyrics) {
+                         return parseLrc(results[0].syncedLyrics);
+                    }
+                }
+
+                console.log(`LRC Lib Failure: No synced result found after 2 attempts for "${trackName}"`);
+                return null;
+                
+            } catch (error) {
+                console.error("Error fetching lyrics from LRC Lib:", error);
+                return null;
+            }
+        }
+
+
+        /** Renders the lyrics lines to the container, or shows a "not available" message. */
+        function renderLyrics(lyrics, trackName, artistName) {
+            activeLyricIndex = -1; // Reset lyric state
+            
+            // Get the current style
+            currentStyle = styleSelector.value;
+
+            if (lyrics && lyrics.length > 0) {
+                activeLineMarker.style.opacity = '1'; // Show the line marker
+                lyricsContent.innerHTML = '';
+                
+                // Add a dummy spacer element to help vertically center the active line
+                const spacer = document.createElement('div');
+                spacer.style.width = '100%';
+                spacer.style.height = '50vh';
+                spacer.style.flexShrink = '0';
+                lyricsContent.appendChild(spacer);
+                
+                lyrics.forEach((line, index) => {
+                    const p = document.createElement('p');
+                    p.textContent = line.text || ' ';
+                    p.className = 'lyric-line';
+                    p.id = `lyric-line-${index}`;
+                    
+                    // 1. Apply Style Class and Randomization Logic
+                    if (currentStyle === 'explosion-pop') {
+                        p.classList.add('explosion-pop');
+                        
+                        // 2. Apply Random X Offset for the "Explosion Pop" effect
+                        // Offset between -25% and 25% of its container width
+                        const randomX = (Math.random() * 50) - 25;
+                        // Apply the style to the transform to give the 'explosion' effect.
+                        p.style.transform = `scale(0.85) translateY(10px) translateX(${randomX}%)`;
+                    }
+
+                    lyricsContent.appendChild(p);
+                });
+
+                // Add another dummy spacer at the bottom
+                const bottomSpacer = document.createElement('div');
+                bottomSpacer.style.width = '100%';
+                bottomSpacer.style.height = '50vh';
+                bottomSpacer.style.flexShrink = '0';
+                lyricsContent.appendChild(bottomSpacer);
+                
+                // Prepare the lyrics container for dynamic scrolling
+                lyricsContent.style.justifyContent = 'flex-start';
+                lyricsContent.style.overflowY = 'scroll';
+                
+            } else {
+                activeLineMarker.style.opacity = '0'; // Hide the line marker
+                // Show "Not Available" message
+                lyricsContent.style.overflowY = 'hidden';
+                lyricsContent.style.justifyContent = 'center';
+                lyricsContent.innerHTML = `
+                    <p style="color:#9ca3af; font-style:italic; margin-bottom:1rem; margin-top:2rem; font-size:1.5rem; font-weight:300; text-align:center;">
+                        No synchronized lyrics available for:
+                        <br><span style="font-weight:600; color:#ffffff;">"${trackName}" by ${artistName}</span>
+                    </p>
+                    <p style="color:#6b7280; font-size:0.875rem; margin-top:1rem; text-align:center;">
+                        (Searching with: "${cleanTrackTitle(trackName)}")
+                    </p>
+                `;
+            }
+        }
+        
+        /** Finds and highlights the current lyric line based on progressMs and scrolls it. */
+        function updateLyricHighlight(progressMs) {
+            if (!currentLyrics) return;
+
+            const lines = currentLyrics;
+            let newIndex = -1;
+
+            // Find the index of the line whose time is less than or equal to the current progress
+            for (let i = lines.length - 1; i >= 0; i--) {
+                if (progressMs >= lines[i].time) {
+                    newIndex = i;
+                    break;
+                }
+            }
+            
+            if (newIndex !== activeLyricIndex) {
+                // Deactivate the old line
+                if (activeLyricIndex !== -1) {
+                    const oldLine = document.getElementById(`lyric-line-${activeLyricIndex}`);
+                    if (oldLine) oldLine.classList.remove('active');
+                    
+                    // NEW: If switching from active, and in explosion-pop mode, re-apply the random transform
+                    if (currentStyle === 'explosion-pop' && oldLine) {
+                         // We don't re-calculate, we let the original transform stick
+                    }
+                }
+
+                // Activate the new line
+                if (newIndex !== -1) {
+                    const newLine = document.getElementById(`lyric-line-${newIndex}`);
+                    if (newLine) {
+                        newLine.classList.add('active');
+                        
+                        // CRITICAL: Reset the custom transform style for the active line 
+                        // to ensure it snaps to the centered, active style defined in CSS,
+                        // overriding any random X-offset applied by Explosion Pop.
+                        newLine.style.transform = '';
+                        
+                        // Scroll to center the newly active line
+                        const targetElement = lyricsContent.children[newIndex + 1];
+                        if (targetElement) {
+                             targetElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center' // This centers the element in the scrolling viewport
+                            });
+                        }
+                    }
+                }
+                activeLyricIndex = newIndex;
+            }
+        }
+
+
+        // --- Authentication Flow ---
+
+        function redirectToAuthCodeFlow() {
+            const codeVerifier = generateRandomString(128);
+            localStorage.setItem('code_verifier', codeVerifier);
+            console.log("Requested Spotify Scope:", SCOPE);
+
+            sha256(codeVerifier).then(codeChallenge => {
+                const params = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: CLIENT_ID,
+                    scope: SCOPE,
+                    code_challenge_method: 'S256',
+                    code_challenge: codeChallenge,
+                    redirect_uri: REDIRECT_URI,
+                });
+
+                window.location.href = `${AUTHORIZE_URL}?${params.toString()}`;
+            }).catch(e => {
+                console.error("Error generating code challenge:", e);
+                loginMessage.innerHTML = '<span style="color:#f87171;">Authentication setup failed. See console.</span>';
+            });
+        }
+
+        async function getAccessToken(code) {
+            const codeVerifier = localStorage.getItem('code_verifier');
+            if (!codeVerifier) {
+                console.error("Code verifier not found.");
+                return null;
+            }
+            
+            localStorage.removeItem('code_verifier'); 
+
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                code_verifier: codeVerifier,
+            });
+
+            try {
+                const response = await fetch(TOKEN_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString(),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error(`Token request failed: ${response.status}`, errorData);
+                    return null; 
+                }
+
+                const data = await response.json();
+                return data.access_token;
+            } catch (error) {
+                console.error('Error fetching access token:', error);
+                return null;
+            }
+        }
+
+
+        // --- Spotify API Interaction & Polling ---
+
+        async function fetchCurrentlyPlaying() {
+            try {
+                const response = await fetch(NOW_PLAYING_URL, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.status === 204) return null;
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = REDIRECT_URI; 
+                        return null;
+                    } 
+                    if (response.status === 403) {
+                         statusMessage.textContent = `403 FORBIDDEN: Your Spotify account is not whitelisted for this app.`;
+                         songDisplay.classList.add('hidden');
+                         styleSelectionSection.classList.add('hidden');
+                         throw new Error(`API Error 403 Forbidden.`);
+                    }
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                return await response.json();
+
+            } catch (error) {
+                console.error('Error fetching currently playing track:', error);
+                if (!error.message.includes('403')) {
+                    clearInterval(pollingIntervalId);
+                    pollingIndicator.classList.add('hidden');
+                    statusMessage.textContent = 'A critical network error occurred.';
+                }
+                return null;
+            }
+        }
+        
+        /** Runs every 250ms to smoothly update the progress bar, time, and lyrics. */
+        function smoothUpdateProgress() {
+            const elapsedTime = Date.now() - progressStartTime;
+            let currentProgressMs = initialProgressMs + elapsedTime;
+
+            if (currentProgressMs > trackDurationMs) {
+                currentProgressMs = trackDurationMs;
+            }
+
+            const progressPercent = (currentProgressMs / trackDurationMs) * 100;
+            
+            // Update UI
+            progressBar.style.width = `${progressPercent}%`;
+            currentTimeText.textContent = msToTime(currentProgressMs);
+            durationTimeText.textContent = msToTime(trackDurationMs);
+
+            // Update Lyrics
+            if (currentLyrics) {
+                updateLyricHighlight(currentProgressMs);
+            }
+        }
+
+
+        /** Main logic to poll for the currently playing song every 3 seconds. */
+        function pollForSong() {
+            loginSection.classList.add('hidden');
+            statusSection.classList.remove('hidden');
+            
+            statusMessage.textContent = 'Checking Spotify status...';
+            lyricsContent.style.justifyContent = 'center';
+            lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">
+                Spotify connected. Checking for active playback...
+            </p>`;
+            activeLineMarker.style.opacity = '0'; // Hide line marker initially
+
+            pollingIndicator.classList.remove('hidden');
+
+            pollingIntervalId = setInterval(async () => {
+                const data = await fetchCurrentlyPlaying();
+                
+                if (data && data.is_playing) {
+                    const track = data.item;
+                    const artistText = track.artists.map(a => a.name).join(', ');
+
+                    if (track.id !== currentTrackId) {
+                        
+                        console.log('New track detected or resumed.');
+                        
+                        if (progressUpdaterId) clearInterval(progressUpdaterId);
+
+                        // Fetch and render new lyrics
+                        currentLyrics = await fetchSyncedLyrics(track.name, artistText);
+                        renderLyrics(currentLyrics, track.name, artistText);
+                        
+                        // Update Metadata
+                        songTitle.textContent = track.name;
+                        artistName.textContent = artistText;
+                        albumName.textContent = track.album.name;
+                        albumArt.src = track.album.images[0]?.url || 'https://placehold.co/800x800/1DB954/ffffff?text=No+Art';
+                        
+                        // Start smooth update
+                        currentTrackId = track.id;
+                        initialProgressMs = data.progress_ms;
+                        trackDurationMs = data.item.duration_ms;
+                        progressStartTime = Date.now();
+                        
+                        progressUpdaterId = setInterval(smoothUpdateProgress, 250);
+
+                        // Initial manual update
+                        smoothUpdateProgress();
+                        
+                        statusMessage.textContent = ''; // Clear status message
+                        songDisplay.classList.remove('hidden');
+                         styleSelectionSection.classList.remove('hidden');
+                        pollingIndicator.classList.add('hidden');
+                        
+                    } else {
+                        // Same track: Re-sync if seeked
+                        const expectedProgressMs = initialProgressMs + (Date.now() - progressStartTime);
+                        const reportedProgressMs = data.progress_ms;
+                        if (Math.abs(expectedProgressMs - reportedProgressMs) > 2000) {
+                            console.log('Seek detected! Re-syncing progress.');
+                            initialProgressMs = reportedProgressMs;
+                            progressStartTime = Date.now();
+                        }
+                    }
+
+                } else {
+                    // Nothing playing or paused
+                    if (progressUpdaterId) {
+                        clearInterval(progressUpdaterId);
+                        progressUpdaterId = null;
+                    }
+                    currentTrackId = null;
+                    currentLyrics = null;
+                    
+                    activeLineMarker.style.opacity = '0'; // Hide line marker when no music
+                    
+                    if (data && !data.is_playing && data.item) {
+                        const artistText = data.item.artists.map(a => a.name).join(', ');
+                        statusMessage.textContent = `Music is paused: ${data.item.name} by ${artistText}`;
+                    } else if (!statusMessage.textContent.includes('403')) {
+                        statusMessage.textContent = 'Waiting for you to start playing music...';
+                    }
+                    
+                    songDisplay.classList.add('hidden');
+                    styleSelectionSection.classList.add('hidden');
+                    pollingIndicator.classList.remove('hidden');
+                    
+                    // Reset lyric view
+                    lyricsContent.style.justifyContent = 'center';
+                    lyricsContent.innerHTML = `<p style="color:#9ca3af; font-style:italic; font-size:1.5rem;">Start a song on Spotify to see the lyrics here.</p>`;
+                }
+
+            }, 1000); // Main state check every 1 seconds
+        }
+
+        // --- Main Initialization ---
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
+            if (progressUpdaterId) clearInterval(progressUpdaterId);
+            
+            const loginButton = document.getElementById('login-button');
+            const loginButtonText = document.getElementById('login-button-text');
+
+            if (code) {
+                // 1. User is being redirected back after Spotify login
+                
+                loginButton.disabled = true;
+                loginButtonText.classList.add('pulse-icon');
+                loginButtonText.textContent = `Authenticating...`;
+
+                // Clean up the URL for a cleaner look
+                history.replaceState(null, '', REDIRECT_URI); 
+
+                accessToken = await getAccessToken(code);
+                
+                if (accessToken) {
+                    // 2. SUCCESS: Token retrieved. Proceed to app
+                    pollForSong();
+                    
+                } else {
+                    // 3. FAILURE: Token exchange failed. Restore login screen and show error.
+                    
+                    loginButton.disabled = false;
+                    loginButtonText.classList.remove('pulse-icon');
+                    loginButtonText.textContent = originalButtonText; // Restore original text
+                    
+                    // Display error message in the login card
+                    loginMessage.innerHTML = '<span style="color:#f87171;">Authentication failed. Please check your console for details and try again.</span>';
+                }
+
+            } else {
+                // Initial load: show login screen and attach handler
+                loginButton.addEventListener('click', redirectToAuthCodeFlow);
+            }
+            
+            // NEW: Event listener for style change
+            styleSelector.addEventListener('change', () => {
+                // Only re-render if a track is currently loaded
+                if (currentLyrics) {
+                    // We need to re-render using the currently loaded lyrics to apply the new style classes
+                    const currentTrackTitle = songTitle.textContent;
+                    const currentArtistName = artistName.textContent;
+                    renderLyrics(currentLyrics, currentTrackTitle, currentArtistName);
+                }
+            });
+        }
+
+        // Run the main function on page load
+        init();
+    </script>
+</body>
+</html>
