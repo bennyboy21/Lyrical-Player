@@ -958,13 +958,13 @@
                         oldLine.style.color = '#7d7d7d'; 
 
                         // When the mouse hovers over the target
-                        newLine.removeEventListener('mouseover', () => {
+                        oldLine.removeEventListener('mouseover', () => {
                             // Add the 'hover-target' class to the custom cursor
                             customCursor.classList.add('hover-target');
                         });
 
                         // When the mouse leaves the target
-                        newLine.removeEventListener('mouseout', () => {
+                        oldLine.removeEventListener('mouseout', () => {
                             // Remove the 'hover-target' class from the custom cursor
                             customCursor.classList.remove('hover-target');
                         });
