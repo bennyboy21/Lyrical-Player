@@ -146,9 +146,9 @@
             background-color: rgba(90, 90, 90, 0.7);
         }
 
-        /* NEW: Style Indicator Circle */
+        /* NEW: Style Indicator Circle (TOP RIGHT OF PREVIEW CONTAINER) */
         #style-indicator-circle {
-            position: fixed; /* Use fixed so it stays in place */
+            position: fixed; /* Use fixed so it stays in place relative to the viewport/preview */
             top: 20px;
             right: 20px;
             z-index: 1001; 
@@ -668,7 +668,8 @@
         }
     </style>
 </head>
-<body id="app-body"> <div id="login-section" class="text-center">
+<body id="app-body"> 
+    <div id="login-section" class="text-center">
         <h1>Lyrify</h1>
         <p id="login-message">
             The ultimate synchronized lyric experience for Spotify.
@@ -890,7 +891,7 @@
         // NEW: Attach listener to the close button inside the sidebar
         closeSidebarButton.addEventListener('click', () => toggleSidebar(false));
         
-        // NEW: Add listener to the style indicator circle to open the sidebar
+        // NEW: Add listener to the style indicator circle to open the sidebar (THE REQUESTED ACTION)
         if (styleIndicator) {
             styleIndicator.addEventListener('click', () => toggleSidebar(true));
         }
