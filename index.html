@@ -477,6 +477,31 @@
             z-index: 9999;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); /* Soft glow matching the accent color */
         }
+
+        #custom-cursor.hover-target {
+            transform: translate(-50%, -50%) scale(1.5); /* Example: make it bigger */
+            background-color: white; /* Example: change the color */
+
+            /* CRITICAL FOR TEXT INVERSION */
+            mix-blend-mode: difference; 
+        }
+
+        /* 2. Isolation for Text/Interactive Elements */
+        /* Ensures text is on its own layer so the mix-blend-mode works cleanly */
+
+        /* For links, buttons, and logos */
+        a, button, .logo {
+            position: relative;
+            z-index: 1000;
+            isolation: isolate; 
+        }
+
+        /* For main headings */
+        .hero-title, .details-headline, .secondary-headline, h2, h3 {
+            position: relative;
+            z-index: 1000;
+            isolation: isolate; 
+        }
     </style>
 </head>
 <body>
@@ -604,17 +629,37 @@
         // const activeLineMarker = document.getElementById('active-line-marker'); // Reference removed
         const styleSelector = document.getElementById('lyric-style'); 
 
-        // --- Custom Cursor Logic (New Addition) ---
+        // --- Custom Cursor Logic (New Addition for Movement and Hover Effect) ---
         const customCursor = document.getElementById('custom-cursor'); 
 
-        // Attach event listener to the whole document
+        // 1. Movement Logic: Follow the mouse
         document.addEventListener('mousemove', (e) => {
-            // Use high-performance CSS transform to position the cursor.
-            // The CSS already handles the visual appearance (size, glow, and smooth transition).
-            // We combine the mouse coordinates (e.clientX, e.clientY) with the required 
-            // centering offset (-50%, -50%) that is needed to center the ring on the mouse pointer.
+            // Updates the position of the cursor element
             customCursor.style.left = `${e.clientX}px`;
             customCursor.style.top = `${e.clientY}px`;
+        });
+
+
+        // 2. Hover Logic: Change cursor appearance over interactive elements
+
+        // Select all elements that should trigger a cursor change (links, buttons, headers, cards)
+        const targets = document.querySelectorAll(
+            'p'
+        );
+
+        // Add event listeners to each target element
+        targets.forEach(target => {
+            // When the mouse hovers over the target
+            target.addEventListener('mouseover', () => {
+                // Add the 'hover-target' class to the custom cursor
+                customCursor.classList.add('hover-target');
+            });
+
+            // When the mouse leaves the target
+            target.addEventListener('mouseout', () => {
+                // Remove the 'hover-target' class from the custom cursor
+                customCursor.classList.remove('hover-target');
+            });
         });
 
 
