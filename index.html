@@ -925,7 +925,8 @@
         /** Generates a cryptographically secure random string. */
         function generateRandomString(length) {
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            const randomValues = crypto.getRandomValues(new Uint8array(length));
+            // Fix: Use 'Uint8Array' with a capital 'A'
+            const randomValues = crypto.getRandomValues(new Uint8Array(length));
             return randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
         }
 
