@@ -79,14 +79,9 @@
             padding: 3rem;
             opacity: 1;
             transition: opacity 0.5s ease-in;
-            margin: auto; /* ADD THIS LINE to ensure perfect centering within the flex body */
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%, -50%);
-            z-index: 1000;
+            margin: auto; /* CRITICAL FIX: Ensure perfect centering */
+            z-index: 10;
         }
-
         #login-section h1 {
             font-size: 3.75rem;
             font-weight: 800;
@@ -184,6 +179,7 @@
             padding-top: 4rem; /* Add padding for the close button at the top */
             display: flex;
             flex-direction: column;
+            gap: 1.5rem; /* Space between h2 and selection section */
         }
 
         #sidebar.open {
@@ -214,24 +210,129 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: #ffffff;
-            margin-bottom: 1.5rem;
+            /* margin-bottom: 1.5rem; */ /* Removed margin-bottom here, using gap on #sidebar */
             padding-top: 0.5rem;
         }
         
-        /* Make the style selector look good inside the sidebar */
-        #style-selector-container {
+        /* --- NEW: STYLE PREVIEW CARDS STYLES --- */
+        #style-selection-section {
             width: 100%;
-            max-width: none !important; /* Overriding previous max-width */
+            max-width: none !important; 
             text-align: left;
-            padding-top: 1rem;
+            padding-top: 0.5rem; /* Reduced padding from previous version */
             border-top: 1px solid #333;
         }
-        
-        #lyric-style {
-            background-color: #2a2a2a !important; /* Darker input */
-            cursor: pointer;
+
+        #style-previews-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem; /* Space between individual cards */
+            margin-top: 0.5rem;
         }
         
+        .style-preview-card {
+            background-color: #2a2a2a; /* Card background */
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .style-preview-card:hover {
+            background-color: #383838;
+            border-color: #555555;
+        }
+        
+        .style-preview-card.selected {
+            border-color: var(--accent-color); /* Highlight selected card with accent color */
+            box-shadow: 0 0 10px rgba(29, 185, 84, 0.5); /* Accent glow */
+            background-color: #333333;
+        }
+
+        .card-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            pointer-events: none; /* Ignore clicks on text */
+        }
+        
+        .card-preview-box {
+            height: 60px; /* Fixed height for the preview area */
+            background-color: #121212;
+            border-radius: 0.3rem;
+            padding: 0.2rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            pointer-events: none; /* Ignore clicks on preview box */
+            transform-style: preserve-3d; /* For 3D Scatter effect */
+            perspective: 150px; /* For 3D Scatter effect */
+        }
+
+        /* --- Mock Lyric Base Styles --- */
+        .mock-lyric-line {
+            font-size: 0.6rem;
+            color: #7d7d7d;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 90%;
+            text-align: center;
+            line-height: 1.2;
+            margin: 0;
+            position: relative;
+        }
+
+        .mock-lyric-line.mock-active {
+            font-weight: 700;
+            color: #ffffff;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* --- Mock Style Specifics --- */
+        
+        /* Centered Scroll Mock */
+        .centered-scroll-mock:nth-child(1) { transform: translateY(-3px); }
+        .centered-scroll-mock.mock-active { transform: scale(1.1) translateY(0); }
+        .centered-scroll-mock:nth-child(3) { transform: translateY(3px); }
+        
+        /* Explosion Pop Mock */
+        .explosion-pop-mock:nth-child(1) { transform: scale(0.9) translateX(-10px); opacity: 0.2; }
+        .explosion-pop-mock.mock-active { transform: scale(1.1); }
+        .explosion-pop-mock:nth-child(3) { transform: scale(0.9) translateX(10px); opacity: 0.2; }
+        
+        /* Fade Mock */
+        .card-preview-box:has(.fade-mock) { display: block; } /* Override flex centering for fade */
+        .fade-mock {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+        .fade-mock.mock-active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 10;
+        }
+
+        /* 3D Scatter Mock */
+        .card-preview-box:has(.scatter-mock) { 
+            justify-content: flex-start; /* Reset vertical centering */
+        }
+        .scatter-mock:nth-child(1) { transform: translateZ(-50px) scale(0.8); opacity: 0.2; }
+        .scatter-mock.mock-active { transform: translateZ(0) scale(1.1); }
+        .scatter-mock:nth-child(3) { transform: translateZ(30px) scale(0.9); opacity: 0.4; }
+        /* --- END NEW STYLE PREVIEW CARDS STYLES --- */
+
+
         /* --- POST-LOGIN LYRICS PAGE STYLES (Phase 2) --- */
         
         /* NEW: Wrapper for the main content to allow smooth shifting */
@@ -672,15 +773,46 @@
         </button>
         
         <h2>Settings</h2>
+        
         <div id="style-selection-section">
-            <div id="style-selector-container">
-                <label for="lyric-style" style="display: block; font-size: 0.875rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: 600;">Lyric Style:</label>
-                <select id="lyric-style" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #333; background-color: #121212; color: #ffffff; font-size: 1rem; appearance: none;">
-                    <option value="centered-scroll">Centered Scroll (Default)</option>
-                    <option value="explosion-pop">Explosion Pop</option>
-                    <option value="fade">Fade</option>
-                    <option value="three-d-scatter">3D Scatter</option>
-                </select>
+            <h3 style="display: block; font-size: 0.875rem; color: #9ca3af; font-weight: 600;">Lyric Style:</h3>
+            
+            <div id="style-previews-container">
+                <div class="style-preview-card" data-style-value="centered-scroll">
+                    <p class="card-label">Centered Scroll (Default)</p>
+                    <div class="card-preview-box">
+                        <p class="mock-lyric-line centered-scroll-mock">Previous line scrolls past...</p>
+                        <p class="mock-lyric-line centered-scroll-mock mock-active">ACTIVE line scrolls into view</p>
+                        <p class="mock-lyric-line centered-scroll-mock">Next line after active</p>
+                    </div>
+                </div>
+                
+                <div class="style-preview-card" data-style-value="explosion-pop">
+                    <p class="card-label">Explosion Pop</p>
+                    <div class="card-preview-box">
+                        <p class="mock-lyric-line explosion-pop-mock">Scattered line moves out</p>
+                        <p class="mock-lyric-line explosion-pop-mock mock-active">ACTIVE line snaps to center</p>
+                        <p class="mock-lyric-line explosion-pop-mock">Another scattered line</p>
+                    </div>
+                </div>
+                
+                <div class="style-preview-card" data-style-value="fade">
+                    <p class="card-label">Fade</p>
+                    <div class="card-preview-box">
+                        <p class="mock-lyric-line fade-mock">Line fades in and out</p>
+                        <p class="mock-lyric-line fade-mock mock-active">ACTIVE line appears large</p>
+                        <p class="mock-lyric-line fade-mock">All centered in one place</p>
+                    </div>
+                </div>
+                
+                <div class="style-preview-card" data-style-value="three-d-scatter">
+                    <p class="card-label">3D Scatter</p>
+                    <div class="card-preview-box">
+                        <p class="mock-lyric-line scatter-mock">Line deep in the background</p>
+                        <p class="mock-lyric-line scatter-mock mock-active">ACTIVE line is in focus</p>
+                        <p class="mock-lyric-line scatter-mock">Line close to the camera</p>
+                    </div>
+                </div>
             </div>
         </div>
         </nav>
@@ -696,7 +828,7 @@
                     <img id="album-art" alt="Album Art" crossOrigin="anonymous"> 
                     <div id="song-Info-Text">
                         
-                        <p style="color:#1ed760;">Now Playing</p>
+                        <p>Now Playing</p>
                         <h2 id="song-title"></h2>
                         <p id="artist-name"></p>
                         <p id="album-name" style="display:none"></p>
@@ -752,7 +884,7 @@
         let trackDurationMs = 0;      
         let currentLyrics = null;     // Stores the lyrics object
         let activeLyricIndex = -1;    // Index of the currently highlighted lyric line
-        let currentStyle = 'centered-scroll'; // Tracks the current style
+        let currentStyle = 'centered-scroll'; // Tracks the current style (Default set here)
         
         // Storing original login state for restoration on failure
         const originalLoginMessage = `The ultimate synchronized lyric experience for Spotify.<br>See what you hear, in real-time.`;
@@ -781,7 +913,9 @@
         const durationTimeText = document.getElementById('duration-time');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsColumn = document.getElementById('lyrics-column');
-        const styleSelector = document.getElementById('lyric-style'); 
+        
+        // NEW REFERENCES for style card structure
+        const stylePreviewCards = document.querySelectorAll('.style-preview-card'); 
 
         // --- NEW SIDEBAR REFERENCES ---
         const appBody = document.getElementById('app-body');
@@ -807,7 +941,7 @@
 
         // Select all elements that should trigger a cursor change (links, buttons, headers, cards)
         const targets = document.querySelectorAll(
-            'p, h2, #song-display, button, #lyric-style'
+            'p, h2, #song-display, button, .style-preview-card'
         );
 
         // Add event listeners to each target element
@@ -855,12 +989,7 @@
         closeSidebarButton.addEventListener('click', () => toggleSidebar(false));
 
         // Close sidebar when a setting is changed (optional, but good UX)
-        styleSelector.addEventListener('change', () => {
-            if (window.innerWidth < 1024) {
-                 toggleSidebar(false);
-            }
-        });
-
+        // NOTE: The logic for closing the sidebar on style selection is now in updateLyricStyle()
 
         // --- Utility Functions (Rest of the file is largely the same) ---
         
@@ -930,8 +1059,8 @@
         /** Generates a cryptographically secure random string. */
         function generateRandomString(length) {
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            // Fix: Use 'Uint8Array' with a capital 'A'
-            const randomValues = crypto.getRandomValues(new Uint8Array(length));
+            // FIX: Corrected typo from Uint8array to Uint8Array
+            const randomValues = crypto.getRandomValues(new Uint8Array(length)); 
             return randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
         }
 
@@ -1051,7 +1180,7 @@
             activeLyricIndex = -1; // Reset lyric state
             
             // Get the current style
-            currentStyle = styleSelector.value;
+            // currentStyle is already managed by the updateLyricStyle function
 
             if (lyrics && lyrics.length > 0) {
                 lyricsContent.innerHTML = '';
@@ -1353,7 +1482,7 @@
                             const [r, g, b] = getAverageColor(albumArt);
                             const colorRGB = `rgb(${r}, ${g}, ${b})`;
                             // Use a slightly transparent version for the shadow/glow effect
-                            const colorRGBA = `rgba(${r}, ${g}, ${b}, 0.8)`; 
+                            const colorRGBA = `rgba(${r}, ${g}, b, 0.8)`; 
 
                             // Set CSS variables on the root element
                             document.documentElement.style.setProperty('--accent-color', colorRGB);
@@ -1427,6 +1556,32 @@
             }, 1000); // Main state check every 1 seconds
         }
 
+        /** Sets the current style, updates the selected card state, and re-renders lyrics. */
+        function updateLyricStyle(newStyle) {
+            currentStyle = newStyle;
+
+            // 1. Update the 'selected' visual state on the cards
+            stylePreviewCards.forEach(card => {
+                if (card.getAttribute('data-style-value') === newStyle) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+
+            // 2. Only re-render if a track is currently loaded
+            if (currentLyrics) {
+                const currentTrackTitle = songTitle.textContent;
+                const currentArtistName = artistName.textContent;
+                renderLyrics(currentLyrics, currentTrackTitle, currentArtistName);
+            }
+
+            // 3. Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                 toggleSidebar(false);
+            }
+        }
+
         // --- Main Initialization ---
 
         async function init() {
@@ -1438,9 +1593,20 @@
             
             const loginButton = document.getElementById('login-button');
             const loginButtonText = document.getElementById('login-button-text');
+            
+            // Attach Listeners to the new Cards
+            stylePreviewCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const newStyle = card.getAttribute('data-style-value');
+                    if (newStyle) {
+                        updateLyricStyle(newStyle);
+                    }
+                });
+            });
 
-            // Set the initial style state
-            currentStyle = styleSelector.value;
+            // Set the initial style state and highlight the default card
+            updateLyricStyle(currentStyle);
+
 
             if (code) {
                 // 1. User is being redirected back after Spotify login
@@ -1473,20 +1639,6 @@
                 // Initial load: show login screen and attach handler
                 loginButton.addEventListener('click', redirectToAuthCodeFlow);
             }
-            
-            // Event listener for style change
-            styleSelector.addEventListener('change', () => {
-                // We need to update the global state first
-                currentStyle = styleSelector.value; 
-
-                // Only re-render if a track is currently loaded
-                if (currentLyrics) {
-                    // We need to re-render using the currently loaded lyrics to apply the new style classes
-                    const currentTrackTitle = songTitle.textContent;
-                    const currentArtistName = artistName.textContent;
-                    renderLyrics(currentLyrics, currentTrackTitle, currentArtistName);
-                }
-            });
         }
 
         // Run the main function on page load
