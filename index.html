@@ -31,6 +31,7 @@
             background-color: #000000; /* Deep black background */
             color: #ffffff;
             min-height: 100vh;
+            /* CRITICAL FIX: Ensure body centers content */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -78,7 +79,7 @@
             padding: 3rem;
             opacity: 1;
             transition: opacity 0.5s ease-in;
-            position: relative; /* Ensure it stays above everything */
+            /* CRITICAL FIX: Remove position: relative to allow body centering */
             z-index: 10;
         }
         #login-section h1 {
@@ -117,7 +118,7 @@
 
         /* --- NEW: SETTINGS BUTTON & SIDEBAR STYLES --- */
         
-        /* Settings Button (Hamburger Icon) */
+        /* Settings Button (Hamburger Icon) - Initial placement */
         #settings-button {
             position: fixed;
             top: 20px;
@@ -139,8 +140,25 @@
         #settings-button:hover {
             background-color: rgba(90, 90, 90, 0.7);
         }
+
+        /* NEW: Button inside the sidebar (used for closing) */
+        #close-sidebar-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            padding: 0.5rem;
+            cursor: pointer;
+            z-index: 1002;
+        }
         
-        #settings-icon {
+        #close-sidebar-button:hover {
+            color: #ffffff;
+        }
+        
+        #settings-icon, #close-icon {
             width: 24px;
             height: 24px;
         }
@@ -158,6 +176,7 @@
             z-index: 1000;
             box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
             padding: 1rem;
+            padding-top: 4rem; /* Add padding for the close button at the top */
             display: flex;
             flex-direction: column;
         }
@@ -641,6 +660,12 @@
     </button>
     
     <nav id="sidebar">
+        <button id="close-sidebar-button">
+            <svg id="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        
         <h2>Settings</h2>
         <div id="style-selection-section">
             <div id="style-selector-container">
@@ -759,6 +784,7 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarBackdrop = document.getElementById('sidebar-backdrop');
         const mainContentWrapper = document.getElementById('main-content-wrapper');
+        const closeSidebarButton = document.getElementById('close-sidebar-button');
 
 
         // --- Custom Cursor Logic (New Addition for Movement and Hover Effect) ---
@@ -794,7 +820,7 @@
             });
         });
         
-        // --- Sidebar Toggling Logic (NEW) ---
+        // --- Sidebar Toggling Logic (UPDATED) ---
         function toggleSidebar(open) {
             const shouldOpen = typeof open === 'boolean' ? open : !sidebar.classList.contains('open');
 
@@ -802,24 +828,26 @@
                 sidebar.classList.add('open');
                 // Apply shift class for desktop layout to move main content
                 mainContentWrapper.classList.add('sidebar-shift');
-                // Change button icon to a close 'X'
-                settingsButton.innerHTML = `<svg id="settings-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>`;
+                
+                // Hide the main settings button when the sidebar is open
+                settingsButton.style.opacity = 0;
+                settingsButton.style.pointerEvents = 'none';
                 
             } else {
                 sidebar.classList.remove('open');
                 mainContentWrapper.classList.remove('sidebar-shift');
-                // Change button icon back to hamburger
-                settingsButton.innerHTML = `<svg id="settings-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>`;
+                
+                // Show the main settings button when the sidebar is closed
+                settingsButton.style.opacity = 1;
+                settingsButton.style.pointerEvents = 'auto';
             }
         }
         
         // Attach event listeners for the sidebar
-        settingsButton.addEventListener('click', () => toggleSidebar());
+        settingsButton.addEventListener('click', () => toggleSidebar(true));
         sidebarBackdrop.addEventListener('click', () => toggleSidebar(false));
+        // NEW: Attach listener to the close button inside the sidebar
+        closeSidebarButton.addEventListener('click', () => toggleSidebar(false));
 
         // Close sidebar when a setting is changed (optional, but good UX)
         styleSelector.addEventListener('change', () => {
@@ -897,7 +925,7 @@
         /** Generates a cryptographically secure random string. */
         function generateRandomString(length) {
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            const randomValues = crypto.getRandomValues(new Uint8Array(length));
+            const randomValues = crypto.getRandomValues(new Uint8array(length));
             return randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
         }
 
@@ -1120,26 +1148,7 @@
                         oldLine.classList.remove('active');
                         // Restore color for deactivated line to make text mask disappear
                         oldLine.style.color = '#7d7d7d'; 
-
-                        // Remove event listeners added during activation
-                        // NOTE: For brevity and to prevent potential memory leaks/duplicates, in a production environment,
-                        // it's better to use event delegation on the parent 'lyricsContent' or use a clean up pattern.
-                        // Here, we'll keep the simple pattern from the original code:
-                        
-                        /* START: Original (and potentially problematic) event listener removal block */
-                        /* oldLine.removeEventListener('mouseover', () => {
-                            customCursor.classList.add('hover-target');
-                        });
-
-                        oldLine.removeEventListener('mouseout', () => {
-                            customCursor.classList.remove('hover-target');
-                        });
-                        */
-                        /* END: Original block */
-                        
                     }
-                    
-                    // explosion-pop and fade rely on CSS for the inactive state
                 }
 
                 // Activate the new line
@@ -1148,25 +1157,11 @@
                     if (newLine) {
                         newLine.classList.add('active');
                         
-                        /* START: Original event listener addition block */
-                        /* newLine.addEventListener('mouseover', () => {
-                            customCursor.classList.add('hover-target');
-                        });
-
-                        newLine.addEventListener('mouseout', () => {
-                            customCursor.classList.remove('hover-target');
-                        });
-                        */
-                        /* END: Original block */
-                        
                         // CRITICAL: Reset the custom transform style ONLY for 'explosion-pop' 
-                        // because 'three-d-scatter' needs its random Z transform to persist.
                         if (currentStyle === 'explosion-pop') {
                              // Reset the inline transform to allow the CSS active rule to take over (which has a hardcoded transform)
                              newLine.style.transform = ''; 
                         } 
-                        // NOTE: For 'three-d-scatter', we do NOT clear the inline transform. The CSS active rule will simply
-                        // OVERRIDE the random scale/rotation but allow the random translateZ() to persist.
                         
                         // Scroll to center the newly active line
                         const targetElement = lyricsContent.children[newIndex + 1];
