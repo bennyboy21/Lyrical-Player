@@ -198,7 +198,8 @@
             width: 100vw;
             height: 100vh;
             background-color: rgba(0, 0, 0, 0.7);
-            z-index: 999;
+            backdrop-filter:blur(.5rem);
+            z-index: -1;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease;
@@ -206,6 +207,7 @@
 
         #sidebar.open ~ #sidebar-backdrop {
             opacity: 1;
+            z-index: 1000;
             visibility: visible;
         }
 
@@ -814,7 +816,7 @@
                 </div>
             </div>
         </div>
-        </nav>
+    </nav>
     <div id="sidebar-backdrop"></div>
     
     <div id="main-content-wrapper">
